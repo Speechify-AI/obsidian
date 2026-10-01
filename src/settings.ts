@@ -74,7 +74,11 @@ export class SpeechifySettingTab extends PluginSettingTab {
 
     const voice = new Setting(containerEl).setName("Voice").setDesc(host.settings.voiceName);
     voice.addButton((button) =>
-      button.setButtonText("Choose").onClick(() => host.chooseVoice(() => voice.setDesc(host.settings.voiceName))),
+      button.setButtonText("Choose").onClick(() =>
+        host.chooseVoice(() => {
+          voice.setDesc(host.settings.voiceName);
+        }),
+      ),
     );
 
     // The slider shows its own value; no description needed.

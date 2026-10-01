@@ -11,12 +11,13 @@ import type { PlayerState } from "./player.ts";
 import { rateLabel } from "./rate.ts";
 
 export interface BarActions {
-  toggle(): void;
-  back(): void;
-  forward(): void;
-  chooseVoice(): void;
-  chooseRate(event: MouseEvent): void;
-  close(): void;
+  // Function properties, not methods: each is handed to a click listener on its own.
+  toggle: () => void;
+  back: () => void;
+  forward: () => void;
+  chooseVoice: () => void;
+  chooseRate: (event: MouseEvent) => void;
+  close: () => void;
 }
 
 export interface Bar {

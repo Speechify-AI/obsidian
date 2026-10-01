@@ -70,8 +70,8 @@ link targets, bare URLs, footnote markers and block ids.
 - The first audio arrives about one to three seconds after you press play.
   After that the plugin renders ahead of the playhead and playback is
   continuous.
-- Mobile is untested. Nothing in the plugin needs desktop, but on iOS the
-  first play may need a second tap.
+- Desktop only for now. Nothing in the plugin needs desktop, but it has not
+  been tested on a phone or tablet, so it does not install there yet.
 
 ## Network use and cost
 

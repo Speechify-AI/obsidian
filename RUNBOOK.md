@@ -14,6 +14,8 @@ release, not submitted to the community directory. Phase 1 of two.
 | Model | `simba-3.2`, fixed in `src/main.ts` |
 | Default voice | `harper_32` |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
+| Platforms | Desktop only (`isDesktopOnly: true`) until mobile is tested |
+| Author in the manifest | Speechify AI, `https://speechify.ai` |
 | Render cache | IndexedDB database `speechify-renders`, 400 MB cap |
 
 ## Verified on 2026-10-01
@@ -71,6 +73,14 @@ fixed the same day: a skipped passage after deleting the one being read, a
 pause between passages being overridden, the cache cap only applied at
 startup, and tables without outer pipes and indented code being read aloud.
 
+Obsidian's review lint (`eslint-plugin-obsidianmd`, recommended config) on
+`src/`, tests excluded: 0 errors, 9 warnings. Run in a scratch copy with
+TypeScript 5.9, because typescript-eslint cannot load TypeScript 7. The
+warnings: CodeMirror imports not in `package.json` (Obsidian supplies them),
+three sentence-case checks of which two want "Speechify" in lowercase, the
+settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
+`src/speechify.ts`, which the tests load without a `window`.
+
 ## Not verified
 
 - Mobile, at all.
@@ -89,7 +99,11 @@ startup, and tables without outer pipes and indented code being read aloud.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
-- `authorUrl` in `manifest.json` is `https://speechify.ai`. Confirm.
+- Publishing goes through <https://community.obsidian.md>: a GitHub release
+  tagged `0.1.0` with `main.js`, `manifest.json` and `styles.css`, then the
+  New plugin form. No release yet.
+- Mobile: test on a phone, then set `isDesktopOnly` back to `false`. No
+  code needs desktop.
 - Readback and Soundbites share the code point bug: neither converts mark
   offsets, so an emoji shifts their highlights too.
 

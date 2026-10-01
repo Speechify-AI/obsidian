@@ -31,7 +31,7 @@ interface Row {
 function settled<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB request failed"));
   });
 }
 
@@ -60,7 +60,7 @@ export function indexedDbCache(factory: IDBFactory): PersistentCache {
     async get(key) {
       try {
         const renders = await store("readwrite");
-        const row: Row | undefined = await settled(renders.get(key));
+        const row = (await settled(renders.get(key))) as Row | undefined;
         if (!row) return null;
         renders.put({ ...row, usedAt: Date.now() });
         return { audio: row.audio, marks: row.marks };
@@ -87,11 +87,11 @@ export function indexedDbCache(factory: IDBFactory): PersistentCache {
         let kept = 0;
         await new Promise<void>((resolve, reject) => {
           const walk = renders.index(BY_USE).openCursor(null, "prev");
-          walk.onerror = () => reject(walk.error);
+          walk.onerror = () => reject(walk.error ?? new Error("IndexedDB cursor failed"));
           walk.onsuccess = () => {
             const cursor = walk.result;
             if (!cursor) return resolve();
-            const row: Row = cursor.value;
+            const row = cursor.value as Row;
             kept += row.audio.byteLength;
             if (kept > limitBytes) cursor.delete();
             cursor.continue();

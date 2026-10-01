@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "minAppVersion": "1.11.4",
   "description": "Listen to your notes in a Speechify voice, with each word and sentence highlighted as it is spoken.",
-  "author": "Speechify",
+  "author": "Speechify AI",
   "authorUrl": "https://speechify.ai",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }
