@@ -1,0 +1,23 @@
+{
+  "name": "obsidian-speechify",
+  "version": "0.1.0",
+  "description": "Listen to your Obsidian notes in a Speechify voice, with each word and sentence highlighted as it is spoken.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.13.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

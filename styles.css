@@ -1,0 +1,206 @@
+/*
+ * Speechify's blue, from the web app's theme: electric-40 for buttons in
+ * light and electric-30 in dark, blue-30 for blue text on a dark surface.
+ * The highlights are see-through so a selection still shows under them; over
+ * white they come out as the web reader's #e0e3ff and #abb3fe.
+ */
+body {
+  --speechify-blue: #2f43fa;
+  --speechify-blue-hover: #3143e0;
+  --speechify-blue-rgb: 47, 67, 250;
+  --speechify-blue-text: #2f43fa;
+  --speechify-sentence: rgba(47, 67, 250, 0.15);
+  --speechify-word: rgba(47, 67, 250, 0.4);
+}
+
+.theme-dark {
+  --speechify-blue: #4759f7;
+  --speechify-blue-hover: #4454e3;
+  --speechify-blue-rgb: 71, 89, 247;
+  --speechify-blue-text: #8894fe;
+  --speechify-sentence: rgba(136, 148, 254, 0.3);
+  --speechify-word: rgba(86, 102, 240, 0.8);
+}
+
+/* What is being read: the sentence lightly, the word within it more strongly. */
+.speechify-sentence {
+  background-color: var(--speechify-sentence);
+  border-radius: var(--radius-s);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.speechify-word {
+  background-color: var(--speechify-word);
+  border-radius: var(--radius-s);
+}
+
+/* The player bar: a pill over the bottom of the window. */
+.speechify-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--size-4-12) + var(--safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: var(--layer-popover);
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-3) var(--size-4-2);
+  border: var(--border-width) solid var(--background-modifier-border);
+  border-radius: 999px;
+  background-color: var(--background-primary);
+  box-shadow: var(--shadow-s);
+}
+
+.is-mobile .speechify-bar {
+  bottom: calc(var(--size-4-18) + var(--safe-area-inset-bottom, 0px));
+}
+
+.speechify-bar .speechify-bar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--size-4-8);
+  min-width: var(--size-4-8);
+  padding: 0 var(--size-2-3);
+  border: none;
+  border-radius: 999px;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: var(--cursor);
+}
+
+.speechify-bar .speechify-bar-button:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.speechify-bar .speechify-bar-button:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.speechify-bar .speechify-bar-voice {
+  max-width: 12em;
+  padding: 0 var(--size-4-3);
+  overflow: hidden;
+  color: var(--text-normal);
+  font-weight: var(--font-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.speechify-bar .speechify-bar-rate {
+  min-width: 3.5em;
+  font-variant-numeric: tabular-nums;
+}
+
+.speechify-bar .speechify-bar-toggle,
+.speechify-bar .speechify-bar-toggle:hover {
+  width: var(--size-4-9);
+  height: var(--size-4-9);
+  background-color: var(--speechify-blue);
+  color: #fff;
+}
+
+.speechify-bar .speechify-bar-toggle:hover {
+  background-color: var(--speechify-blue-hover);
+}
+
+/* Waiting for audio: a white arc turning on a faint track. */
+.speechify-bar .speechify-bar-toggle.speechify-bar-loading::after {
+  content: "";
+  box-sizing: border-box;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: speechify-spin 0.8s linear infinite;
+}
+
+@keyframes speechify-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The voice picker. */
+.speechify-voice {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+}
+
+.speechify-voice .speechify-voice-sample,
+.speechify-voice-sample-none {
+  flex: none;
+  width: var(--size-4-9);
+  height: var(--size-4-9);
+}
+
+.speechify-voice .speechify-voice-sample {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(var(--speechify-blue-rgb), 0.12);
+  box-shadow: none;
+  color: var(--speechify-blue-text);
+  cursor: var(--cursor);
+}
+
+.speechify-voice .speechify-voice-sample:hover,
+.speechify-voice .speechify-voice-sample.is-playing {
+  background-color: var(--speechify-blue);
+  color: #fff;
+}
+
+.speechify-voice .speechify-voice-sample .svg-icon {
+  width: var(--icon-s);
+  height: var(--icon-s);
+  fill: currentColor;
+}
+
+.speechify-voice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.speechify-voice-name {
+  font-weight: var(--font-medium);
+}
+
+.speechify-voice-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-2-2) var(--size-2-3);
+  margin-top: var(--size-2-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.speechify-voice-trait {
+  padding: 0 var(--size-2-3);
+  border: var(--border-width) solid var(--background-modifier-border);
+  border-radius: 999px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.speechify-voice-current {
+  display: flex;
+  flex: none;
+  color: var(--speechify-blue-text);
+}
+
+/* Settings: what the key check found. */
+.speechify-key-status {
+  margin-top: var(--size-2-2);
+  color: var(--text-normal);
+}
