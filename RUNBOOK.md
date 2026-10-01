@@ -5,7 +5,7 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 ## State
 
 Version 0.1.0, built 2026-10-01. Public at
-<https://github.com/Speechify-AI/obsidian-speechify> since the same day. No
+<https://github.com/Speechify-AI/obsidian> since the same day. No
 release, not submitted to the community directory. Phase 1 of two.
 
 | Thing | Value |

@@ -14,8 +14,8 @@ The plugin is not in the community directory yet. Until it is, build it and
 copy three files into your vault:
 
 ```sh
-git clone https://github.com/Speechify-AI/obsidian-speechify.git
-cd obsidian-speechify
+git clone https://github.com/Speechify-AI/obsidian.git
+cd obsidian
 npm install
 npm run build
 mkdir -p <vault>/.obsidian/plugins/speechify
