@@ -1,6 +1,6 @@
 {
   "name": "obsidian-speechify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Listen to your Obsidian notes in a Speechify voice, with each word and sentence highlighted as it is spoken.",
   "license": "MIT",
   "private": true,

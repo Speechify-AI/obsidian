@@ -17,9 +17,10 @@ import {
 } from "obsidian";
 import { type Bar, createBar } from "./bar.ts";
 import { indexedDbCache } from "./cache.ts";
-import { canHighlight, highlightExtension } from "./highlight.ts";
+import { canHighlight, type Highlight, highlightExtension } from "./highlight.ts";
 import { createPlayer, type Player, type PlayerState, type StartOptions } from "./player.ts";
 import { clampRate, RATE_STEP, rateLabel, RATES } from "./rate.ts";
+import { createReadingPainter } from "./reading.ts";
 import { memoryCache, type RenderCache } from "./render.ts";
 import { DEFAULT_SETTINGS, type Settings, type SettingsHost, SpeechifySettingTab } from "./settings.ts";
 import { checkKey, type Http, type KeyCheck, listVoices, type TtsConfig, type Voice } from "./speechify.ts";
@@ -51,6 +52,9 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
   private bar: Bar | null = null;
   /** The note being read, so playback stops when it is closed or replaced. */
   private listening: { view: MarkdownView; path: string } | null = null;
+  /** What the editor shows as spoken, kept so Reading view can be painted the same. */
+  private painted: Highlight | null = null;
+  private readonly reading = createReadingPainter(() => this.settings.follow);
   private voices: { key: string; list: Voice[] } | null = null;
   private readonly headerActions = new Map<MarkdownView, HTMLElement>();
 
@@ -76,11 +80,16 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
         this.updateBar();
       },
       onError: (message) => new Notice(message),
+      onPaint: (highlight, moved) => {
+        this.painted = highlight;
+        this.paintReading(moved);
+      },
     });
     this.player.setRate(this.settings.rate);
 
     addIcon(ICON, ICON_SVG);
     this.registerEditorExtension(highlightExtension);
+    this.registerMarkdownPostProcessor((el, context) => this.reading.process(el, context));
     this.addSettingTab(new SpeechifySettingTab(this.app, this, this));
     this.addRibbonIcon(ICON, "Listen to this note", () => this.toggle());
     this.addCommands();
@@ -150,7 +159,17 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
       return;
     }
     this.showBar();
-    if (this.player.start(editorView, options)) this.listening = { view, path: view.file?.path ?? "" };
+    if (!this.player.start(editorView, options)) return;
+    this.listening = { view, path: view.file?.path ?? "" };
+    // The first paint came before `listening` was set.
+    this.paintReading(true);
+  }
+
+  /** Show in Reading view what the editor shows, when the note being read is in Reading view. */
+  private paintReading(moved: boolean): void {
+    const view = this.listening?.view;
+    if (view && this.painted && view.getMode() === "preview") this.reading.paint(view, this.painted, moved);
+    else this.reading.clear();
   }
 
   private selectionOf(editor: Editor): StartOptions {
@@ -185,6 +204,8 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
     if (!listening) return;
     const gone = listening.view.file?.path !== listening.path || this.player.view()?.dom.isConnected !== true;
     if (gone) this.player.stop();
+    // Switching between the editor and Reading view is a layout change too.
+    else this.paintReading(false);
   }
 
   // ---- the bar ----------------------------------------------------------------

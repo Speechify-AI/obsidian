@@ -4,9 +4,10 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.0, built 2026-10-01. Public at
-<https://github.com/Speechify-AI/obsidian> since the same day. No
-release, not submitted to the community directory. Phase 1 of two.
+Version 0.1.1, released 2026-10-03 with highlighting in Reading view. 0.1.0
+went out on 2026-10-01, the day the repo at
+<https://github.com/Speechify-AI/obsidian> went public. Not yet submitted to
+the community directory.
 
 | Thing | Value |
 | --- | --- |
@@ -20,8 +21,8 @@ release, not submitted to the community directory. Phase 1 of two.
 
 ## Verified on 2026-10-01
 
-Unit tests: 75 passing across speakable, marks, seek, render, speechify,
-text and rate.
+Unit tests: 84 passing across speakable, marks, seek, render, speechify,
+text, rate and align.
 
 Against the live API (simba-3.2, harper_32, a Speechify test workspace):
 
@@ -81,10 +82,33 @@ three sentence-case checks of which two want "Speechify" in lowercase, the
 settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
 `src/speechify.ts`, which the tests load without a `window`.
 
+## Verified on 2026-10-02: highlighting in Reading view
+
+In Obsidian 1.13.7 on macOS, in a throwaway instance with no API key. The
+speech API was replaced by a stub that returns silent audio and made-up word
+marks, so the timings are not Speechify's.
+
+- Play from the top in Reading view: the sentence and word highlights follow
+  through a heading, bold, italic, a link, a wikilink alias, inline code, an
+  emoji, list items, a task item and a callout title and body.
+- A bare URL, a tag, a link to a heading and `&amp;` in the note: the words
+  around them are found. The sentence highlight stops at "Note" for a link
+  shown as "Note > Heading".
+- An embedded note is stepped over and the line after it highlights.
+- In a 400-paragraph note, skipping forward 90 sentences kept the spoken
+  sentence on screen. A section Obsidian had not rendered was scrolled to and
+  highlighted on the next word. After scrolling away by hand the view stayed
+  put.
+- Pause holds the highlight. Next sentence works while paused. Switching to
+  the editor and back while paused shows the highlight in each. Stop and
+  disabling the plugin leave no highlight registered.
+
 ## Not verified
 
 - Mobile, at all.
-- Popout windows. The bar is added to the main window's body.
+- Popout windows. The bar is added to the main window's body. Reading view
+  highlights use the popout's own registry, untried.
+- Reading view against the live API, and in a community theme.
 - Cloned voices. The test key has none.
 - The cache's 400 MB prune. It runs at startup and after every 20 MB
   written, and has never been run against a full cache.
@@ -92,16 +116,19 @@ settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
 
 ## Open
 
-- Phase 2: highlighting in Reading view, a play button per paragraph,
-  lock-screen controls, community directory submission.
+- Phase 2: a play button per paragraph, lock-screen controls.
+- Reading view: no "listen from here", so it starts from the top. A footnote
+  definition is read but not highlighted, because Obsidian renders it in a
+  footnotes section that reports the note's last line as its source.
 - Callouts in Live Preview are read but not highlighted, because Live
   Preview draws them as a widget.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
-- Publishing goes through <https://community.obsidian.md>: a GitHub release
-  tagged `0.1.0` with `main.js`, `manifest.json` and `styles.css`, then the
-  New plugin form. No release yet.
+- Submit at <https://community.obsidian.md>: sign in, connect GitHub, then
+  New plugin with the repo URL. The `0.1.0` release it needs exists. Each
+  later release needs a tag equal to the manifest version, no `v`, with
+  `main.js`, `manifest.json` and `styles.css` attached.
 - Mobile: test on a phone, then set `isDesktopOnly` back to `false`. No
   code needs desktop.
 - Readback and Soundbites share the code point bug: neither converts mark
@@ -138,3 +165,8 @@ that cost time the first time:
   `app.vault.setConfig("nativeMenus", false)` to see the speed menu.
 - Reload after a build with `app.plugins.disablePlugin("speechify")` then
   `enablePlugin`.
+- `/tmp` is emptied between days. A new profile opens the vault in Restricted
+  Mode behind a "Trust author" dialog, and has no API key and no cache.
+- Without a key, assign `plugin.config` a function returning a `TtsConfig`
+  whose `http` answers with a silent WAV in `audio_data` and one word mark
+  per word. Playback and highlighting then run with no request to Speechify.

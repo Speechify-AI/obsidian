@@ -1,7 +1,7 @@
 {
   "id": "speechify",
   "name": "Speechify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.11.4",
   "description": "Listen to your notes in a Speechify voice, with each word and sentence highlighted as it is spoken.",
   "author": "Speechify AI",

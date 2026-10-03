@@ -1,7 +1,7 @@
 # Speechify for Obsidian
 
 Listen to your notes in a Speechify voice. The sentence being read is
-highlighted in the editor and the word being spoken is highlighted inside it.
+highlighted in the note and the word being spoken is highlighted inside it.
 
 Press play and a small player appears over the bottom of the window with
 play and pause, sentence back and forward, the speed, and the voice. You can
@@ -63,8 +63,9 @@ link targets, bare URLs, footnote markers and block ids.
 
 ## Limits
 
-- Highlighting works in Live Preview and Source mode. In Reading view the
-  note is read but nothing is highlighted yet.
+- Highlighting works in Live Preview, Source mode and Reading view. Reading
+  view always starts from the top of the note, and footnote text is read
+  there without a highlight.
 - Live Preview draws callouts as a block of its own, so the highlight does
   not show inside one unless your cursor is in it. Source mode shows it.
 - The first audio arrives about one to three seconds after you press play.

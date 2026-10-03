@@ -51,8 +51,14 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
   player holds are offsets into the note as it was read. `highlight.ts`
   composes every change since, and a range is mapped through that before it
   is painted. At each passage boundary a changed note is read again.
+- **Reading view is painted, never rewritten.** Its highlights are CSS
+  Custom Highlights over ranges of the rendered text. Wrapping text in
+  elements would fight Obsidian, which rebuilds sections as you scroll, and
+  every plugin that post-processes them. The note offsets stay the truth:
+  `src/align.ts` only finds where a range's words sit on screen.
 - **Unload leaves nothing behind.** The bar, the header buttons, the
-  decorations and the audio all go in `onunload` and `stop`.
+  decorations, the Reading view highlights and the audio all go in
+  `onunload` and `stop`.
 
 ## Structure
 
@@ -63,6 +69,9 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
 - `src/speakable.ts`: markdown to passages with a source map (tested)
 - `src/highlight.ts`: the CodeMirror field: two mark decorations and the
   edit tracking
+- `src/reading.ts`: the same two highlights in Reading view, and following
+  the spoken sentence there
+- `src/align.ts`: spoken words to the words Reading view shows (tested)
 - `src/seek.ts`: where a sentence skip lands (tested)
 - `src/render.ts`: one passage to audio and marks, through the cache
   (tested)

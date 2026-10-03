@@ -14,7 +14,15 @@
  * runs to the end and lands in the cache.
  */
 import { EditorView } from "@codemirror/view";
-import { hasEdits, showHighlight, startTracking, stopTracking, toCurrent, toCurrentPosition } from "./highlight.ts";
+import {
+  hasEdits,
+  showHighlight,
+  startTracking,
+  stopTracking,
+  toCurrent,
+  toCurrentPosition,
+  type Highlight,
+} from "./highlight.ts";
 import { markAtTime, timeSentences, type TimedRange } from "./marks.ts";
 import { renderKey, renderPassage, type RenderCache, type Rendered } from "./render.ts";
 import { sentenceAtOffset, sentenceAtTime, skipTarget } from "./seek.ts";
@@ -44,6 +52,12 @@ export interface PlayerHost {
   follow(): boolean;
   onState(state: PlayerState): void;
   onError(message: string): void;
+  /**
+   * What is painted in the editor, as ranges of the note as it stands now, or
+   * null when nothing is. `moved` says the sentence changed. Reading view is
+   * painted from this.
+   */
+  onPaint(highlight: Highlight | null, moved: boolean): void;
 }
 
 export interface StartOptions {
@@ -72,7 +86,7 @@ const LOOK_AHEAD = 2;
 /** A cached passage loads in a few milliseconds; only a real wait shows as loading. */
 const LOADING_AFTER_MS = 150;
 /** The player bar floats over the bottom of the note. */
-const BAR_CLEARANCE_PX = 96;
+export const BAR_CLEARANCE_PX = 96;
 
 interface Session {
   view: EditorView;
@@ -223,10 +237,12 @@ export function createPlayer(host: PlayerHost): Player {
     );
   }
 
-  function paint(s: Session, highlight: { sentence: SourceRange | null; word: SourceRange | null }, moved: boolean): void {
+  function paint(s: Session, highlight: Highlight, moved: boolean): void {
     if (!s.view.dom.isConnected) return;
     showHighlight(s.view, highlight);
-    if (moved) keepInView(s, toCurrent(s.view, highlight.sentence));
+    const sentence = toCurrent(s.view, highlight.sentence);
+    host.onPaint({ sentence, word: toCurrent(s.view, highlight.word) }, moved);
+    if (moved) keepInView(s, sentence);
   }
 
   function keepInView(s: Session, sentence: SourceRange | null): void {
@@ -299,6 +315,7 @@ export function createPlayer(host: PlayerHost): Player {
       session.view.scrollDOM.removeEventListener("wheel", session.onScroll);
       session.view.scrollDOM.removeEventListener("touchmove", session.onScroll);
       if (session.view.dom.isConnected) stopTracking(session.view);
+      host.onPaint(null, false);
     }
     session = null;
     setStatus("idle");

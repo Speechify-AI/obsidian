@@ -35,6 +35,15 @@ body {
   border-radius: var(--radius-s);
 }
 
+/* The same two in Reading view, painted by name with the CSS Custom Highlight API. */
+::highlight(speechify-sentence) {
+  background-color: var(--speechify-sentence);
+}
+
+::highlight(speechify-word) {
+  background-color: var(--speechify-word);
+}
+
 /* The player bar: a pill over the bottom of the window. */
 .speechify-bar {
   position: fixed;
