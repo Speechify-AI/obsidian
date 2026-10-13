@@ -4,7 +4,7 @@ Listen to your notes in a Speechify voice. The sentence being read is
 highlighted in the note and the word being spoken is highlighted inside it.
 
 Press play and a small player appears over the bottom of the window with
-play and pause, sentence back and forward, the speed, and the voice. You can
+play and pause, back and forward 10 seconds, the speed, and the voice. You can
 keep editing while it reads. Type above the playhead and the highlight moves
 with the text.
 

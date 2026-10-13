@@ -4,8 +4,9 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.1, released 2026-10-03 with highlighting in Reading view. 0.1.0
-went out on 2026-10-01, the day the repo at
+Version 0.1.2, released 2026-10-13 with 10-second jumps on the bar and
+Speechify's icons. 0.1.1 went out on 2026-10-03 with highlighting in Reading
+view, and 0.1.0 on 2026-10-01, the day the repo at
 <https://github.com/Speechify-AI/obsidian> went public. Not yet submitted to
 the community directory.
 
@@ -81,6 +82,23 @@ warnings: CodeMirror imports not in `package.json` (Obsidian supplies them),
 three sentence-case checks of which two want "Speechify" in lowercase, the
 settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
 `src/speechify.ts`, which the tests load without a `window`.
+
+## Verified on 2026-10-13: 10-second jumps
+
+In Obsidian 1.14.4 on macOS, in a throwaway instance, against the stub
+below with a word every 500 ms, so passages ran about 18 s.
+
+- Back and forward 10 s land within a passage, carry into the next passage,
+  and land that far before the end of the previous one. Back from the first
+  passage goes to its start. A jump while paused stays paused.
+- After a paragraph was typed above the playhead, a jump across passages
+  landed in the right passage at its new position.
+- The Next sentence command still skips by sentence.
+- The bar's icons follow the theme in light and dark. The play button is
+  round: Obsidian 1.14 gives buttons a superellipse corner, which the bar
+  overrides with `corner-shape: round`.
+- Not checked: a cleared API key in settings, now saved as `""` where the
+  1.14 types say `null` can arrive. Jumps against real Speechify audio.
 
 ## Verified on 2026-10-02: highlighting in Reading view
 
