@@ -143,6 +143,17 @@ body {
  * quiet line of detail, a hairline between rows and a grey row under the
  * pointer or the keyboard where Obsidian would use the accent colour.
  */
+/*
+ * The picker's text colours, taken once here. Themes recolour the selected
+ * row, often by redefining --text-normal on it, for white on the accent;
+ * on this grey row that leaves white on grey. These are resolved on the
+ * modal, so a row redefining the theme's variables does not reach them.
+ */
+.speechify-voices {
+  --speechify-voice-text: var(--text-normal);
+  --speechify-voice-muted: var(--text-muted);
+}
+
 .speechify-voices .suggestion-item.speechify-voice {
   position: relative;
   display: flex;
@@ -150,12 +161,12 @@ body {
   gap: var(--size-4-3);
   padding: var(--size-4-2) var(--size-4-3);
   border-radius: var(--radius-m);
-  color: var(--text-normal);
+  color: var(--speechify-voice-text);
 }
 
 .speechify-voices .suggestion-item.speechify-voice.is-selected {
   background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+  color: var(--speechify-voice-text);
 }
 
 /* The hairline starts at the text, as in Speechify's list, and steps aside for the grey row. */
@@ -251,13 +262,14 @@ body {
 }
 
 .speechify-voice-name {
+  color: var(--speechify-voice-text);
   font-weight: var(--font-medium);
 }
 
 .speechify-voice-detail {
   margin-top: var(--size-2-1);
   overflow: hidden;
-  color: var(--text-muted);
+  color: var(--speechify-voice-muted);
   font-size: var(--font-ui-smaller);
   text-overflow: ellipsis;
   white-space: nowrap;

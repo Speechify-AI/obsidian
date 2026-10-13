@@ -4,8 +4,9 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.3, released 2026-10-13 with voice avatars and a voice picker
-styled after Speechify's. 0.1.2 went out the same day with 10-second jumps
+Version 0.1.4, released 2026-10-13: the voice picker's selected row keeps
+dark text under themes that whiten it. 0.1.3 went out the same day with
+voice avatars and a picker styled after Speechify's, 0.1.2 the same day with 10-second jumps
 on the bar and Speechify's icons, 0.1.1 on 2026-10-03 with highlighting in Reading
 view, and 0.1.0 on 2026-10-01, the day the repo at
 <https://github.com/Speechify-AI/obsidian> went public. Not yet submitted to
@@ -94,7 +95,9 @@ drawn pictures in place of Speechify's.
   tried). Play shows on the row under the pointer or keyboard, stop while a
   sample plays. A voice with no sample keeps a plain avatar.
 - The selected row is grey with normal text in light and dark, not the
-  theme's accent.
+  theme's accent. Also under Glassive 1.1.15, which redefines
+  `--text-normal` and `--text-muted` on the selected row for white on its
+  accent: the picker takes its colours on the modal, so they hold.
 - Not checked: what `avatar_image` holds for real voices. The docs say it
   is an optional string.
 
