@@ -1,6 +1,8 @@
 /**
  * The voice picker: every voice the key can render on the model, searchable,
- * with a sample on each.
+ * with a sample on each. Each row leads with a round avatar, the
+ * catalogue's picture or else the voice's initial, which shows the sample's
+ * play button on the row under the pointer or the keyboard.
  */
 import { type App, setIcon, SuggestModal } from "obsidian";
 import { languageName, matchesVoice, type Voice, voiceTraits } from "./speechify.ts";
@@ -8,7 +10,7 @@ import { languageName, matchesVoice, type Voice, voiceTraits } from "./speechify
 export class VoiceModal extends SuggestModal<Voice> {
   /** Samples play through their own element so they never replace the reader's audio. */
   private readonly sample = new Audio();
-  private sampling: HTMLElement | null = null;
+  private sampling: { button: HTMLElement; icon: HTMLElement } | null = null;
 
   constructor(
     app: App,
@@ -35,7 +37,7 @@ export class VoiceModal extends SuggestModal<Voice> {
 
   renderSuggestion(voice: Voice, el: HTMLElement): void {
     el.addClass("speechify-voice");
-    this.renderSample(voice, el);
+    this.renderAvatar(voice, el);
 
     const text = el.createDiv({ cls: "speechify-voice-text" });
     text.createDiv({ cls: "speechify-voice-name", text: voice.name });
@@ -45,13 +47,13 @@ export class VoiceModal extends SuggestModal<Voice> {
       language,
       voice.gender === "unspecified" ? "" : voice.gender === "female" ? "Female" : "Male",
     ].filter((part) => part !== "");
-    const detail = text.createDiv({ cls: "speechify-voice-detail" });
-    if (origin.length > 0) detail.createSpan({ text: origin.join(" · ") });
     // "British English" has already said "british".
     const said = new Set(language.toLowerCase().split(" "));
-    for (const trait of voiceTraits(voice)) {
-      if (!said.has(trait.split(" ")[0] ?? "")) detail.createSpan({ cls: "speechify-voice-trait", text: trait });
-    }
+    const traits = voiceTraits(voice)
+      .filter((trait) => !said.has(trait.split(" ")[0] ?? ""))
+      .map((trait) => trait.charAt(0).toUpperCase() + trait.slice(1));
+    const detail = [...origin, ...traits];
+    if (detail.length > 0) text.createDiv({ cls: "speechify-voice-detail", text: detail.join(" · ") });
 
     if (voice.id === this.currentId) {
       const current = el.createDiv({ cls: "speechify-voice-current", attr: { "aria-label": "Current voice" } });
@@ -59,25 +61,39 @@ export class VoiceModal extends SuggestModal<Voice> {
     }
   }
 
-  /** The round button that plays the catalogue's sample, or its width left empty so the names line up. */
-  private renderSample(voice: Voice, el: HTMLElement): void {
+  /**
+   * The voice's picture, or its initial, in a circle. With a catalogue sample
+   * it is a button that plays it; without one it stays a plain avatar.
+   */
+  private renderAvatar(voice: Voice, el: HTMLElement): void {
     const preview = voice.preview;
-    if (preview === null) {
-      el.createDiv({ cls: "speechify-voice-sample-none" });
-      return;
+    const initial = [...voice.name][0]?.toUpperCase() ?? "";
+    const avatar =
+      preview === null
+        ? el.createDiv({ cls: "speechify-voice-avatar" })
+        : el.createEl("button", {
+            cls: "speechify-voice-avatar speechify-voice-sample",
+            attr: { "aria-label": `Hear ${voice.name}` },
+          });
+    avatar.createSpan({ cls: "speechify-voice-initial", text: initial });
+    if (voice.avatar !== null) {
+      const picture = avatar.createEl("img", { cls: "speechify-voice-picture", attr: { src: voice.avatar, alt: "", loading: "lazy" } });
+      // A picture that will not load leaves the initial showing.
+      picture.addEventListener("error", () => picture.remove());
     }
-    const play = el.createEl("button", { cls: "speechify-voice-sample", attr: { "aria-label": `Hear ${voice.name}` } });
-    setIcon(play, "play");
+    if (preview === null) return;
+    const icon = avatar.createSpan({ cls: "speechify-voice-play" });
+    setIcon(icon, "speechify-play");
     // Hearing a voice is not choosing it: keep the click from the row.
-    play.addEventListener("mousedown", (event) => event.stopPropagation());
-    play.addEventListener("click", (event) => {
+    avatar.addEventListener("mousedown", (event) => event.stopPropagation());
+    avatar.addEventListener("click", (event) => {
       event.stopPropagation();
-      const wasPlaying = this.sampling === play;
+      const wasPlaying = this.sampling?.button === avatar;
       this.stopSample();
       if (wasPlaying) return;
-      this.sampling = play;
-      play.addClass("is-playing");
-      setIcon(play, "square");
+      this.sampling = { button: avatar, icon };
+      avatar.addClass("is-playing");
+      setIcon(icon, "square");
       this.sample.src = preview;
       void this.sample.play().catch(() => this.stopSample());
     });
@@ -95,8 +111,8 @@ export class VoiceModal extends SuggestModal<Voice> {
   private stopSample(): void {
     this.sample.pause();
     if (this.sampling) {
-      this.sampling.removeClass("is-playing");
-      setIcon(this.sampling, "play");
+      this.sampling.button.removeClass("is-playing");
+      setIcon(this.sampling.icon, "speechify-play");
     }
     this.sampling = null;
   }

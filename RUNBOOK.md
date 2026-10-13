@@ -4,8 +4,9 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.2, released 2026-10-13 with 10-second jumps on the bar and
-Speechify's icons. 0.1.1 went out on 2026-10-03 with highlighting in Reading
+Version 0.1.3, released 2026-10-13 with voice avatars and a voice picker
+styled after Speechify's. 0.1.2 went out the same day with 10-second jumps
+on the bar and Speechify's icons, 0.1.1 on 2026-10-03 with highlighting in Reading
 view, and 0.1.0 on 2026-10-01, the day the repo at
 <https://github.com/Speechify-AI/obsidian> went public. Not yet submitted to
 the community directory.
@@ -82,6 +83,20 @@ warnings: CodeMirror imports not in `package.json` (Obsidian supplies them),
 three sentence-case checks of which two want "Speechify" in lowercase, the
 settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
 `src/speechify.ts`, which the tests load without a `window`.
+
+## Verified on 2026-10-13: the voice picker
+
+In Obsidian 1.14.4, in a throwaway instance, with a made-up catalogue and
+drawn pictures in place of Speechify's.
+
+- Each row shows the catalogue's `avatar_image` in a circle, or the voice's
+  initial when there is none or it fails to load (an unreachable URL was
+  tried). Play shows on the row under the pointer or keyboard, stop while a
+  sample plays. A voice with no sample keeps a plain avatar.
+- The selected row is grey with normal text in light and dark, not the
+  theme's accent.
+- Not checked: what `avatar_image` holds for real voices. The docs say it
+  is an optional string.
 
 ## Verified on 2026-10-13: 10-second jumps
 

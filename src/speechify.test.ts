@@ -26,6 +26,7 @@ describe("toVoice", () => {
         gender: "female",
         tags: ["narrator", "", 3],
         preview_audio: null,
+        avatar_image: "https://x/harper.webp",
         models: [
           { name: "simba-3.0", languages: [{ locale: "en-US", preview_audio: "https://x/old.mp3" }] },
           { name: "simba-3.2", languages: [{ locale: "en-US", preview_audio: "https://x/new.mp3" }] },
@@ -41,6 +42,7 @@ describe("toVoice", () => {
       gender: "female",
       tags: ["narrator"],
       preview: "https://x/new.mp3",
+      avatar: "https://x/harper.webp",
       featured: true,
     });
   });
@@ -55,7 +57,7 @@ describe("toVoice", () => {
   it("prefers the voice's own preview, and has none when the catalogue has none", () => {
     expect(toVoice({ id: "a", preview_audio: "https://x/a.mp3", models: [] })?.preview).toBe("https://x/a.mp3");
     const bare = toVoice({ id: "b", type: "personal", gender: "not_specified" });
-    expect(bare).toMatchObject({ name: "b", cloned: true, gender: "unspecified", tags: [], preview: null, featured: false });
+    expect(bare).toMatchObject({ name: "b", cloned: true, gender: "unspecified", tags: [], preview: null, avatar: null, featured: false });
     expect(toVoice({})).toBeNull();
   });
 });

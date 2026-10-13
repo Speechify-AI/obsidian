@@ -139,6 +139,8 @@ export interface Voice {
   tags: string[];
   /** A sample the catalogue already has, or null when one must be synthesized. */
   preview: string | null;
+  /** The catalogue's picture of the voice, or null when it has none. */
+  avatar: string | null;
   /** One of the roster voices the picker puts first. See `isFeatured`. */
   featured: boolean;
 }
@@ -163,6 +165,7 @@ export interface RawVoice {
   gender?: unknown;
   tags?: unknown;
   preview_audio?: unknown;
+  avatar_image?: unknown;
   models?: { name?: string; languages?: { locale?: string; preview_audio?: unknown }[] }[];
 }
 
@@ -210,6 +213,7 @@ export function toVoice(raw: RawVoice, model?: string): Voice | null {
     gender: raw.gender === "female" || raw.gender === "male" ? raw.gender : "unspecified",
     tags: Array.isArray(raw.tags) ? raw.tags.filter((t): t is string => typeof t === "string" && t !== "") : [],
     preview: previewOf(raw, model),
+    avatar: typeof raw.avatar_image === "string" && raw.avatar_image !== "" ? raw.avatar_image : null,
     featured: raw.type !== "personal" && isFeatured(raw.id, model),
   };
 }

@@ -138,31 +138,99 @@ body {
   }
 }
 
-/* The voice picker. */
-.speechify-voice {
+/*
+ * The voice picker, after Speechify's own: a round avatar, the name, one
+ * quiet line of detail, a hairline between rows and a grey row under the
+ * pointer or the keyboard where Obsidian would use the accent colour.
+ */
+.speechify-voices .suggestion-item.speechify-voice {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--radius-m);
+  color: var(--text-normal);
 }
 
-.speechify-voice .speechify-voice-sample,
-.speechify-voice-sample-none {
-  flex: none;
-  width: var(--size-4-9);
-  height: var(--size-4-9);
+.speechify-voices .suggestion-item.speechify-voice.is-selected {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
-.speechify-voice .speechify-voice-sample {
+/* The hairline starts at the text, as in Speechify's list, and steps aside for the grey row. */
+.speechify-voices .suggestion-item.speechify-voice + .suggestion-item.speechify-voice::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: var(--size-4-3);
+  left: calc(var(--size-4-3) + var(--size-4-10) + var(--size-4-3));
+  border-top: var(--border-width) solid var(--background-modifier-border);
+}
+
+.speechify-voices .suggestion-item.speechify-voice.is-selected::before,
+.speechify-voices .suggestion-item.speechify-voice.is-selected + .suggestion-item.speechify-voice::before {
+  display: none;
+}
+
+.speechify-voice .speechify-voice-avatar {
+  position: relative;
+  overflow: hidden;
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
+  width: var(--size-4-10);
+  height: var(--size-4-10);
   padding: 0;
   border: none;
   border-radius: 50%;
+  corner-shape: round;
   background-color: rgba(var(--speechify-blue-rgb), 0.12);
   box-shadow: none;
   color: var(--speechify-blue-text);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.speechify-voice .speechify-voice-sample {
   cursor: var(--cursor);
+}
+
+/* The picture covers the initial, which stays underneath for a picture that fails. */
+.speechify-voice .speechify-voice-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The initial gives way to play on the row in hand, and to stop while the sample plays. */
+/* Over a picture, play sits on a dark wash, as in Speechify's list. */
+.speechify-voice .speechify-voice-play {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.speechify-voice .speechify-voice-picture ~ .speechify-voice-play {
+  background-color: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}
+
+.speechify-voice.is-selected .speechify-voice-sample .speechify-voice-initial,
+.speechify-voice:hover .speechify-voice-sample .speechify-voice-initial,
+.speechify-voice .speechify-voice-sample.is-playing .speechify-voice-initial {
+  display: none;
+}
+
+.speechify-voice.is-selected .speechify-voice-sample .speechify-voice-play,
+.speechify-voice:hover .speechify-voice-sample .speechify-voice-play,
+.speechify-voice .speechify-voice-sample.is-playing .speechify-voice-play {
+  display: flex;
 }
 
 .speechify-voice .speechify-voice-sample:hover,
@@ -171,7 +239,7 @@ body {
   color: #fff;
 }
 
-.speechify-voice .speechify-voice-sample .svg-icon {
+.speechify-voice .speechify-voice-play .svg-icon {
   width: var(--icon-s);
   height: var(--icon-s);
   fill: currentColor;
@@ -187,21 +255,12 @@ body {
 }
 
 .speechify-voice-detail {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--size-2-2) var(--size-2-3);
   margin-top: var(--size-2-1);
+  overflow: hidden;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-}
-
-.speechify-voice-trait {
-  padding: 0 var(--size-2-3);
-  border: var(--border-width) solid var(--background-modifier-border);
-  border-radius: 999px;
-  color: var(--text-faint);
-  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .speechify-voice-current {
