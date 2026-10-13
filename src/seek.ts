@@ -1,4 +1,4 @@
-/** Where the playhead is among a passage's sentences, and where a skip lands. */
+/** Where the playhead is among a passage's sentences, and where a skip or a jump lands. */
 import type { TimedRange } from "./marks.ts";
 
 /** Index of the sentence playing at `ms`: the last one that has started. */
@@ -32,4 +32,21 @@ export function skipTarget(
   if (direction === 1) return current + 1 < sentences.length ? current + 1 : "next";
   if (ms - (sentences[current]?.startMs ?? 0) > RESTART_AFTER_MS) return current;
   return current > 0 ? current - 1 : "previous";
+}
+
+/** How far the bar's back and forward buttons jump, in audio time. */
+export const JUMP_MS = 10_000;
+
+/**
+ * Where a jump lands: a time in this passage, how far into the next one, or
+ * how far before the end of the previous one. Each passage is its own clip,
+ * so a jump across the edge carries what is left of it into the neighbour.
+ */
+export type JumpTarget = { ms: number } | { next: number } | { previous: number };
+
+export function jumpTarget(durationMs: number, ms: number, deltaMs: number): JumpTarget {
+  const to = ms + deltaMs;
+  if (to < 0) return { previous: -to };
+  if (to >= durationMs) return { next: to - durationMs };
+  return { ms: to };
 }

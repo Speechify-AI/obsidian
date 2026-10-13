@@ -65,7 +65,7 @@ export class SpeechifySettingTab extends PluginSettingTab {
     };
     key.addComponent((el) =>
       new SecretComponent(this.app, el).setValue(host.settings.keySecret).onChange(async (name) => {
-        host.settings.keySecret = name;
+        host.settings.keySecret = name ?? "";
         await host.saveSettings();
         await check();
       }),

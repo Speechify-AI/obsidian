@@ -25,7 +25,7 @@ import {
 } from "./highlight.ts";
 import { markAtTime, timeSentences, type TimedRange } from "./marks.ts";
 import { renderKey, renderPassage, type RenderCache, type Rendered } from "./render.ts";
-import { sentenceAtOffset, sentenceAtTime, skipTarget } from "./seek.ts";
+import { JUMP_MS, jumpTarget, sentenceAtOffset, sentenceAtTime, skipTarget } from "./seek.ts";
 import {
   clipPassages,
   passageIndexAt,
@@ -72,7 +72,10 @@ export interface Player {
   start(view: EditorView, options?: StartOptions): boolean;
   /** Play or pause. False when nothing is loaded, so the caller can start. */
   toggle(): boolean;
+  /** Next or previous sentence. */
   skip(direction: 1 | -1): void;
+  /** Forward or back ten seconds of audio. */
+  jump(direction: 1 | -1): void;
   setRate(rate: number): void;
   /** The voice changed: say the current sentence again in the new one. */
   voiceChanged(): void;
@@ -85,6 +88,9 @@ export interface Player {
 const LOOK_AHEAD = 2;
 /** A cached passage loads in a few milliseconds; only a real wait shows as loading. */
 const LOADING_AFTER_MS = 150;
+/** A time to land at in a passage, from its start or before its end. */
+type At = { ms: number } | { beforeEndMs: number };
+
 /** The player bar floats over the bottom of the note. */
 export const BAR_CLEARANCE_PX = 96;
 
@@ -156,7 +162,8 @@ export function createPlayer(host: PlayerHost): Player {
     audio.playbackRate = rate;
   }
 
-  async function playAt(index: number, offset = 0): Promise<void> {
+  /** Play passage `index` from spoken offset `offset`, or from `time` when given. */
+  async function playAt(index: number, offset = 0, time?: At): Promise<void> {
     const s = session;
     const passage = s?.passages[index];
     if (!s || !passage) return stop();
@@ -190,7 +197,8 @@ export function createPlayer(host: PlayerHost): Player {
     const sentences = timeSentences(passage.text, rendered.marks);
     s.current = { rendered, sentences };
     load(rendered.audio);
-    if (offset > 0) audio.currentTime = (sentences[sentenceAtOffset(sentences, offset)]?.startMs ?? 0) / 1000;
+    if (time) audio.currentTime = ("ms" in time ? time.ms : Math.max(0, spokenMs(rendered) - time.beforeEndMs)) / 1000;
+    else if (offset > 0) audio.currentTime = (sentences[sentenceAtOffset(sentences, offset)]?.startMs ?? 0) / 1000;
     await resume();
   }
 
@@ -214,6 +222,11 @@ export function createPlayer(host: PlayerHost): Player {
       frame = window.requestAnimationFrame(step);
     };
     step();
+  }
+
+  function seekTo(ms: number): void {
+    audio.currentTime = ms / 1000;
+    paintAt(ms);
   }
 
   function paintAt(ms: number): void {
@@ -255,13 +268,13 @@ export function createPlayer(host: PlayerHost): Player {
     else if (s.following) s.view.dispatch({ effects: EditorView.scrollIntoView(sentence.from, { y: "center" }) });
   }
 
-  /** Go to the passage after or before the one that is loaded. */
-  function move(direction: 1 | -1): void {
+  /** Go to the passage after or before the one that is loaded, at `time` in it when given. */
+  function move(direction: 1 | -1, time?: At): void {
     const s = session;
     if (!s) return;
-    if (s.view.dom.isConnected && hasEdits(s.view)) return moveInEditedNote(s, direction);
+    if (s.view.dom.isConnected && hasEdits(s.view)) return moveInEditedNote(s, direction, time);
     const index = Math.max(0, s.index + direction);
-    void playAt(index, direction === -1 && s.index > 0 ? lastOffset(s.passages[index]) : 0);
+    void playAt(index, direction === -1 && s.index > 0 ? lastOffset(s.passages[index]) : 0, time);
   }
 
   /**
@@ -271,7 +284,7 @@ export function createPlayer(host: PlayerHost): Player {
    * the place is found by position: forward resumes at the first text after
    * where this passage ended, back at the last text before where it began.
    */
-  function moveInEditedNote(s: Session, direction: 1 | -1): void {
+  function moveInEditedNote(s: Session, direction: 1 | -1, time?: At): void {
     const map = s.passages[s.index]?.map ?? [];
     const boundary =
       direction === 1
@@ -285,12 +298,12 @@ export function createPlayer(host: PlayerHost): Player {
     const next = at === -1 ? s.passages.length : at;
     if (direction === 1) {
       const passage = s.passages[next];
-      return void playAt(next, passage ? spokenOffsetAt(passage, boundary) : 0);
+      return void playAt(next, passage ? spokenOffsetAt(passage, boundary) : 0, time);
     }
     // The passage at the boundary may begin before it: then that is the one to go back into.
     const straddles = (s.passages[next]?.map[0] ?? boundary) < boundary;
     const index = Math.max(0, straddles ? next : next - 1);
-    void playAt(index, lastOffset(s.passages[index]));
+    void playAt(index, lastOffset(s.passages[index]), time);
   }
 
   audio.addEventListener("ended", () => move(1));
@@ -384,9 +397,18 @@ export function createPlayer(host: PlayerHost): Player {
       const target = skipTarget(s.current.sentences, audio.currentTime * 1000, direction);
       if (target === "next") return move(1);
       if (target === "previous") return move(-1);
-      const startMs = s.current.sentences[target]?.startMs ?? 0;
-      audio.currentTime = startMs / 1000;
-      paintAt(startMs);
+      seekTo(s.current.sentences[target]?.startMs ?? 0);
+    },
+
+    jump(direction) {
+      const s = session;
+      if (!s?.current) return;
+      s.following = true;
+      const target = jumpTarget(spokenMs(s.current.rendered), audio.currentTime * 1000, direction * JUMP_MS);
+      if ("next" in target) return move(1, { ms: target.next });
+      // Back from the first passage goes to its start; there is nothing before it.
+      if ("previous" in target) return s.index > 0 ? move(-1, { beforeEndMs: target.previous }) : seekTo(0);
+      seekTo(target.ms);
     },
 
     setRate(next) {
@@ -406,6 +428,11 @@ export function createPlayer(host: PlayerHost): Player {
     stop,
     view: () => session?.view ?? null,
   };
+}
+
+/** How long a passage's speech runs: the end of its last word. */
+function spokenMs(rendered: Rendered): number {
+  return rendered.marks[rendered.marks.length - 1]?.endMs ?? 0;
 }
 
 /** A spoken offset inside a passage's last sentence: where going back lands. */

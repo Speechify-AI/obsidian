@@ -74,6 +74,8 @@ body {
   padding: 0 var(--size-2-3);
   border: none;
   border-radius: 999px;
+  /* Obsidian 1.14 gives buttons a superellipse corner, which turns a circle into a squircle. */
+  corner-shape: round;
   background-color: transparent;
   box-shadow: none;
   color: var(--text-muted);

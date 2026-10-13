@@ -72,7 +72,7 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
 - `src/reading.ts`: the same two highlights in Reading view, and following
   the spoken sentence there
 - `src/align.ts`: spoken words to the words Reading view shows (tested)
-- `src/seek.ts`: where a sentence skip lands (tested)
+- `src/seek.ts`: where a sentence skip or a 10-second jump lands (tested)
 - `src/render.ts`: one passage to audio and marks, through the cache
   (tested)
 - `src/cache.ts`: the IndexedDB render cache

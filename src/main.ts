@@ -15,7 +15,7 @@ import {
   Plugin,
   requestUrl,
 } from "obsidian";
-import { type Bar, createBar } from "./bar.ts";
+import { addBarIcons, type Bar, createBar } from "./bar.ts";
 import { indexedDbCache } from "./cache.ts";
 import { canHighlight, type Highlight, highlightExtension } from "./highlight.ts";
 import { createPlayer, type Player, type PlayerState, type StartOptions } from "./player.ts";
@@ -88,6 +88,7 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
     this.player.setRate(this.settings.rate);
 
     addIcon(ICON, ICON_SVG);
+    addBarIcons();
     this.registerEditorExtension(highlightExtension);
     this.registerMarkdownPostProcessor((el, context) => this.reading.process(el, context));
     this.addSettingTab(new SpeechifySettingTab(this.app, this, this));
@@ -213,8 +214,8 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
   private showBar(): void {
     this.bar ??= createBar(document.body, {
       toggle: () => this.toggle(),
-      back: () => this.player.skip(-1),
-      forward: () => this.player.skip(1),
+      back: () => this.player.jump(-1),
+      forward: () => this.player.jump(1),
       chooseVoice: () => this.chooseVoice(),
       chooseRate: (event) => this.chooseRate(event),
       close: () => {
