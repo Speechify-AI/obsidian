@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CALLER,
   checkKey,
   describeVoice,
   languageName,
@@ -11,6 +12,7 @@ import {
   toVoice,
   TtsError,
   voiceTraits,
+  withCaller,
   type Http,
   type HttpRequest,
 } from "./speechify.ts";
@@ -109,6 +111,31 @@ describe("synthesize", () => {
   it("refuses a 200 that is not the expected JSON", async () => {
     const http: Http = async () => ({ status: 200, text: "<html>" });
     await expect(synthesize("Hello", { ...base, voiceId: "v", http })).rejects.toBeInstanceOf(TtsError);
+  });
+});
+
+describe("withCaller", () => {
+  it("names the plugin and its version on every request, beside the key", async () => {
+    const seen: HttpRequest[] = [];
+    const http = withCaller(async (request) => {
+      seen.push(request);
+      return { status: 200, text: JSON.stringify({ voices: [], has_more: false }) };
+    }, "0.1.5");
+    await listVoices({ ...base, http });
+    await synthesize("Hello", { ...base, voiceId: "v", http }).catch(() => undefined);
+    expect(seen).toHaveLength(2);
+    for (const request of seen) {
+      expect(request.headers).toMatchObject({
+        Authorization: `Bearer ${base.apiKey}`,
+        "Speechify-Caller": "obsidian",
+        "Speechify-Caller-Version": "0.1.5",
+      });
+    }
+  });
+
+  it("uses a slug the API accepts: lowercase, 40 characters at most", () => {
+    expect(CALLER).toBe("obsidian");
+    expect(CALLER).toMatch(/^[a-z0-9._-]{1,40}$/);
   });
 });
 

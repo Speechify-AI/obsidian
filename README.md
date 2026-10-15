@@ -28,7 +28,8 @@ Obsidian 1.11.4 or later.
 ## Set up
 
 You need a Speechify API key. Create one at
-<https://platform.speechify.ai/api-keys>, then open the plugin's settings and
+<https://platform.speechify.ai/api-keys?utm_source=github&utm_medium=readme&utm_campaign=obsidian>,
+then open the plugin's settings and
 choose it under **API key**. Obsidian stores the key in its keychain. The
 plugin's own settings file, which lives in your vault and syncs with it, only
 holds the name you gave the secret.

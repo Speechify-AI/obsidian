@@ -45,6 +45,12 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
   never logged or shown.
 - **Requests go through `requestUrl`.** No `fetch`, no Node modules. That is
   what keeps the plugin loadable on mobile.
+- **Every request names the plugin.** `withCaller` adds `Speechify-Caller:
+  obsidian` and `Speechify-Caller-Version` to each one; that is how Speechify
+  attributes the traffic, and without them the plugin is invisible. The slug
+  never changes once shipped. Links to Speechify from the README and the
+  manifest carry `utm_source`, `utm_medium` and `utm_campaign=obsidian`. The
+  rules: <https://docs.speechify.ai/build/guides/integrations/build-an-integration>.
 - **CodeMirror is external in the bundle.** Obsidian supplies it. A bundled
   second copy would make the editor reject the highlight field.
 - **The player reads the note once and maps through edits.** Ranges the

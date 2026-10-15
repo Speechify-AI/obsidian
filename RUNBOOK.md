@@ -4,8 +4,12 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.4, released 2026-10-13: the voice picker's selected row keeps
-dark text under themes that whiten it. 0.1.3 went out the same day with
+Version 0.1.5, released 2026-10-15: every request carries
+`Speechify-Caller: obsidian` and the plugin's version, so the traffic shows
+in Speechify's analytics. Workspaces that first called the API from an
+earlier release are attributed to nothing and are not back-filled. 0.1.4 went out
+on 2026-10-13: the voice picker's selected row keeps dark text under themes
+that whiten it. 0.1.3 went out the same day with
 voice avatars and a picker styled after Speechify's, 0.1.2 the same day with 10-second jumps
 on the bar and Speechify's icons, 0.1.1 on 2026-10-03 with highlighting in Reading
 view, and 0.1.0 on 2026-10-01, the day the repo at
@@ -19,7 +23,8 @@ the community directory.
 | Default voice | `harper_32` |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
 | Platforms | Desktop only (`isDesktopOnly: true`) until mobile is tested |
-| Author in the manifest | Speechify AI, `https://speechify.ai` |
+| Author in the manifest | Speechify AI, `https://speechify.ai` with listing UTM tags |
+| Integration slug | `obsidian`, in `src/speechify.ts`, never changes |
 | Render cache | IndexedDB database `speechify-renders`, 400 MB cap |
 
 ## Verified on 2026-10-01

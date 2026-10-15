@@ -28,6 +28,28 @@ export interface HttpResponse {
 /** Must resolve for every status, never throw on a 4xx or 5xx. */
 export type Http = (request: HttpRequest) => Promise<HttpResponse>;
 
+/**
+ * The integration slug Speechify attributes this plugin's requests to. One
+ * per thing a developer installs, and it never changes once shipped: the
+ * API keys `first_integration` on a workspace by it. Lowercase `a-z 0-9 . _ -`,
+ * 40 characters at most, or the API drops it whole.
+ */
+export const CALLER = "obsidian";
+
+/**
+ * Every request carries `Speechify-Caller` and `Speechify-Caller-Version`,
+ * so the plugin's traffic is attributed in Speechify's analytics. Neither
+ * header gates anything; without them the plugin is invisible. `version` is
+ * the plugin's own release, never folded into the slug.
+ */
+export function withCaller(http: Http, version: string): Http {
+  return (request) =>
+    http({
+      ...request,
+      headers: { ...request.headers, "Speechify-Caller": CALLER, "Speechify-Caller-Version": version },
+    });
+}
+
 export interface TtsConfig {
   apiBase: string;
   apiKey: string;
