@@ -76,6 +76,8 @@ export interface Player {
   skip(direction: 1 | -1): void;
   /** Forward or back ten seconds of audio. */
   jump(direction: 1 | -1): void;
+  /** Play from the sentence holding this offset of the note as it stands now: a click on it. */
+  goTo(position: number): void;
   setRate(rate: number): void;
   /** The voice changed: say the current sentence again in the new one. */
   voiceChanged(): void;
@@ -409,6 +411,34 @@ export function createPlayer(host: PlayerHost): Player {
       // Back from the first passage goes to its start; there is nothing before it.
       if ("previous" in target) return s.index > 0 ? move(-1, { beforeEndMs: target.previous }) : seekTo(0);
       seekTo(target.ms);
+    },
+
+    goTo(position) {
+      const s = session;
+      if (!s) return;
+      // In an edited note the click is a position in the note as it stands
+      // now, so it is looked up in a fresh reading. That reading only
+      // replaces the session's once the click has somewhere to go.
+      const edited = s.view.dom.isConnected && hasEdits(s.view);
+      const selection = edited ? toCurrent(s.view, s.selection) : s.selection;
+      const passages = edited ? read(s.view, selection) : s.passages;
+      const index = passageIndexAt(passages, position);
+      const passage = passages[index];
+      if (!passage) return;
+      s.following = true;
+      const playing = s.passages[s.index]?.text;
+      if (edited) {
+        s.selection = selection;
+        s.passages = passages;
+        startTracking(s.view);
+      }
+      const offset = spokenOffsetAt(passage, position);
+      // The passage that is loaded needs no new audio, only a new time.
+      if (s.current && passage.text === playing) {
+        s.index = index;
+        return seekTo(s.current.sentences[sentenceAtOffset(s.current.sentences, offset)]?.startMs ?? 0);
+      }
+      void playAt(index, offset);
     },
 
     setRate(next) {

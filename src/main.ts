@@ -39,6 +39,20 @@ const requestUrlHttp: Http = async (request) => {
   return { status: response.status, text: response.text };
 };
 
+/**
+ * Where a row of a table drawn by Live Preview is in the note. The widget
+ * stands over the table's source, so a point in it has no position of its
+ * own: the row's index names its line, counting the delimiter row that is
+ * not drawn.
+ */
+function tableRowPosition(view: EditorView, widget: Element, row: Element): number | null {
+  const index = Array.from(widget.querySelectorAll("tr")).indexOf(row as HTMLTableRowElement);
+  if (index === -1) return null;
+  const { doc } = view.state;
+  const line = doc.lineAt(view.posAtDOM(widget)).number + index + (index > 0 ? 1 : 0);
+  return line <= doc.lines ? doc.line(line).from : null;
+}
+
 /** The CodeMirror view behind an Obsidian editor. */
 function editorViewOf(editor: Editor): EditorView | null {
   const cm: unknown = "cm" in editor ? editor.cm : null;
@@ -109,6 +123,7 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
         );
       }),
     );
+    this.registerDomEvent(document, "click", (event) => this.onClick(event));
     this.registerEvent(this.app.workspace.on("layout-change", () => this.onLayout()));
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.onLayout()));
     this.registerEvent(this.app.workspace.on("file-open", () => this.onLayout()));
@@ -166,6 +181,35 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
     this.listening = { view, path: view.file?.path ?? "" };
     // The first paint came before `listening` was set.
     this.paintReading(true);
+  }
+
+  /** While playing, a plain click on a sentence of the note being read moves the playhead to it. */
+  private onClick(event: MouseEvent): void {
+    const view = this.listening?.view;
+    if (!view || !this.settings.clickToListen) return;
+    if (this.state.status !== "playing" && this.state.status !== "loading") return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || target.closest("a, button, input, select, textarea")) return;
+    const position =
+      view.getMode() === "preview" ? this.readingPositionAt(view, target, event) : this.editorPositionAt(target, event);
+    if (position !== null) this.player.goTo(position);
+  }
+
+  private readingPositionAt(view: MarkdownView, target: Element, event: MouseEvent): number | null {
+    if (!view.previewMode.containerEl.contains(target)) return null;
+    // A drag that selected text is not a click.
+    if (view.containerEl.ownerDocument.getSelection()?.isCollapsed === false) return null;
+    return this.reading.positionAt(view, event.clientX, event.clientY);
+  }
+
+  private editorPositionAt(target: Element, event: MouseEvent): number | null {
+    const editorView = this.player.view();
+    if (!editorView?.contentDOM.contains(target) || !editorView.state.selection.main.empty) return null;
+    const row = target.closest("tr");
+    const widget = row?.closest(".cm-table-widget");
+    if (row && widget) return tableRowPosition(editorView, widget, row);
+    return editorView.posAtCoords({ x: event.clientX, y: event.clientY });
   }
 
   /** Show in Reading view what the editor shows, when the note being read is in Reading view. */

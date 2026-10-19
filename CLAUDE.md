@@ -13,10 +13,12 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
 
 - **Every spoken character is a character of the note.** `toPassages`
   returns each passage's text plus `map`, the note offset of every character
-  in it. Nothing is ever inserted, so `map` is strictly increasing and any
-  spoken range has a note range. A feature that wants to speak words that are
-  not in the note (say "link" for a bare URL) breaks this; skip the text
-  instead.
+  in it. Nothing is ever inserted (a newline inside a paragraph and the pipe
+  between two table cells are spoken as the space they stand for, and map to
+  themselves), so `map` is strictly increasing and any spoken range has a
+  note range. A feature that wants to speak words that are not in the note
+  (say "link" for a bare URL, or a cell's column name) breaks this; skip the
+  text instead. Tables are read a row at a time for this reason.
 - **Highlighting is anchored on character offsets, never token positions,
   and gaps are absorbed forward.** `src/marks.ts` is Readback's, evidence and
   all.
@@ -61,7 +63,8 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
   Custom Highlights over ranges of the rendered text. Wrapping text in
   elements would fight Obsidian, which rebuilds sections as you scroll, and
   every plugin that post-processes them. The note offsets stay the truth:
-  `src/align.ts` only finds where a range's words sit on screen.
+  `src/align.ts` only finds where a range's words sit on screen, and, for a
+  click, which note offset sits under a point on screen.
 - **Unload leaves nothing behind.** The bar, the header buttons, the
   decorations, the Reading view highlights and the audio all go in
   `onunload` and `stop`.
@@ -77,7 +80,8 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
   edit tracking
 - `src/reading.ts`: the same two highlights in Reading view, and following
   the spoken sentence there
-- `src/align.ts`: spoken words to the words Reading view shows (tested)
+- `src/align.ts`: spoken words to the words Reading view shows, both ways
+  (tested)
 - `src/seek.ts`: where a sentence skip or a 10-second jump lands (tested)
 - `src/render.ts`: one passage to audio and marks, through the cache
   (tested)

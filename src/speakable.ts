@@ -9,12 +9,17 @@
  *
  * Nothing is ever inserted. Every spoken character is a character of the
  * note (a newline inside a paragraph is spoken as a space, and maps to that
- * newline), so `map` is strictly increasing and a spoken range always has a
- * source range.
+ * newline; so is the pipe between two table cells), so `map` is strictly
+ * increasing and a spoken range always has a source range.
  *
- * What is not read: frontmatter, code blocks, math, comments, tables,
- * images and embeds, link targets, bare URLs, footnote markers, block ids,
- * and the markup characters themselves.
+ * A table is read row by row, each row a block of its own with its cells in
+ * order. There is no way to say which column a cell is in without inserting
+ * words, so the header row is simply read first, like the first line of a
+ * list.
+ *
+ * What is not read: frontmatter, code blocks, math, comments, images and
+ * embeds, link targets, bare URLs, footnote markers, block ids, a table's
+ * delimiter row, and the markup characters themselves.
  */
 import { chunkRanges } from "./text.ts";
 
@@ -62,7 +67,7 @@ interface Reader {
   /** The paragraph, heading or list item being read. */
   block: Passage;
   out: Passage[];
-  /** Inside a table: every row is skipped until a line with no pipe. */
+  /** Inside a table: every line is a row until one with no pipe. */
   inTable: boolean;
   /** Inside a list, where an indented line is the item's own text and not code. */
   inList: boolean;
@@ -85,6 +90,8 @@ const HEADING_CLOSE = /[ \t]+#+[ \t]*$/;
 const RULE = /^[ \t]*(?:([-*_])(?:[ \t]*\1){2,}|=+)[ \t]*$/;
 /** The row under a table's header: "| --- | :-: |", outer pipes optional. */
 const TABLE_DELIMITER = /^[ \t]*\|?(?:[ \t]*:?-+:?[ \t]*\|)+(?:[ \t]*:?-+:?[ \t]*)?$/;
+/** A pipe that ends a cell; `\|` is a pipe in the cell. */
+const CELL_PIPE = /(?<!\\)\|/g;
 const INDENTED = /^(?: {4}|\t)/;
 const LINK_DEFINITION = /^[ \t]{0,3}\[[^\]^][^\]]*\]:[ \t]+\S/;
 const FOOTNOTE_DEFINITION = /^[ \t]{0,3}\[\^[^\]]+\]:[ \t]*/;
@@ -108,7 +115,23 @@ function readLine(reader: Reader, lineStart: number, lineEnd: number, nextLine: 
     reader.inTable = true;
   }
   if (reader.inTable) {
+    // Each row is a block. The delimiter row is markup and says nothing.
     flush(reader);
+    if (!TABLE_DELIMITER.test(row)) {
+      // Obsidian cuts a row at its pipes before it reads the cells, so no
+      // markup crosses one: a bare URL ends at the pipe. Each pipe is spoken
+      // as the space between its cells.
+      const rowStart = lineStart + (whole.length - row.length);
+      let cellStart = rowStart;
+      for (const pipe of row.matchAll(CELL_PIPE)) {
+        const at = rowStart + pipe.index;
+        speakInline(source, skip, cellStart, at, reader.block);
+        emit(reader.block, " ", at);
+        cellStart = at + 1;
+      }
+      speakInline(source, skip, cellStart, lineEnd, reader.block);
+      flush(reader);
+    }
     return;
   }
 
@@ -338,10 +361,12 @@ function speakInline(source: string, skip: Uint8Array, from: number, to: number,
     }
 
     if (ch === "h" && (prev === undefined || !/\w/.test(prev))) {
-      const url = matchAt(URL, source, i, to);
+      URL.lastIndex = i;
+      // An address runs to the end of what is being read: a table cell ends it.
+      const url = URL.exec(source)?.[0].slice(0, to - i);
       if (url) {
         // Punctuation that ends the sentence is not part of the address.
-        i += url[0].replace(/[.,;:!?)\]'"]+$/, "").length;
+        i += url.replace(/[.,;:!?)\]'"]+$/, "").length;
         continue;
       }
     }

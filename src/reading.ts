@@ -10,7 +10,7 @@
  * and Obsidian rebuilds it as you scroll, so nothing is wrapped or inserted.
  */
 import type { MarkdownPostProcessorContext, MarkdownView } from "obsidian";
-import { alignSpoken, sectionSpoken, shownSpan } from "./align.ts";
+import { alignSpoken, offsetAtShown, sectionSpoken, shownSpan } from "./align.ts";
 import type { Highlight as Spoken } from "./highlight.ts";
 import { BAR_CLEARANCE_PX } from "./player.ts";
 import { toPassages, type Passage, type SourceRange } from "./speakable.ts";
@@ -29,6 +29,8 @@ export interface ReadingPainter {
   process(el: HTMLElement, context: MarkdownPostProcessorContext): void;
   /** Paint ranges of the note as it stands now. `moved` says the sentence changed. */
   paint(view: MarkdownView, highlight: Spoken, moved: boolean): void;
+  /** The note offset behind a click at window coordinates, or null when it is not on read text. */
+  positionAt(view: MarkdownView, x: number, y: number): number | null;
   clear(): void;
 }
 
@@ -71,17 +73,29 @@ export function createReadingPainter(follow: () => boolean): ReadingPainter {
     return read;
   }
 
+  /** Where a rendered section came from, if Obsidian still knows. */
+  function sectionOf(el: HTMLElement): Section | null {
+    const info = contexts.get(el)?.getSectionInfo(el);
+    if (!info) return null;
+    const { lineStarts } = reading(info.text);
+    const from = lineStarts[info.lineStart] ?? info.text.length;
+    const to = lineStarts[info.lineEnd + 1] ?? info.text.length;
+    return { el, text: info.text, from, to };
+  }
+
   /** The rendered section holding note offset `position`, if it is in the DOM. */
   function sectionAt(sections: HTMLElement[], position: number): Section | null {
     for (const el of sections) {
-      const info = contexts.get(el)?.getSectionInfo(el);
-      if (!info) continue;
-      const { lineStarts } = reading(info.text);
-      const from = lineStarts[info.lineStart] ?? info.text.length;
-      const to = lineStarts[info.lineEnd + 1] ?? info.text.length;
-      if (position >= from && position < to) return { el, text: info.text, from, to };
+      const section = sectionOf(el);
+      if (section && position >= section.from && position < section.to) return section;
     }
     return null;
+  }
+
+  /** This note's own rendered sections: an embedded note has a sizer and sections of its own further in. */
+  function sectionsIn(container: HTMLElement): HTMLElement[] {
+    const sizer = container.querySelector(".markdown-preview-sizer");
+    return Array.from(sizer?.querySelectorAll<HTMLElement>(":scope > div") ?? []);
   }
 
   function watch(next: HTMLElement | null): void {
@@ -113,9 +127,7 @@ export function createReadingPainter(follow: () => boolean): ReadingPainter {
       watch(container.querySelector<HTMLElement>(".markdown-preview-view"));
 
       const anchor = highlight.sentence ?? highlight.word;
-      // This note's own sections: an embedded note has a sizer and sections of its own further in.
-      const sizer = container.querySelector(".markdown-preview-sizer");
-      const sections = Array.from(sizer?.querySelectorAll<HTMLElement>(":scope > div") ?? []);
+      const sections = sectionsIn(container);
       const section = anchor && sectionAt(sections, anchor.from);
       if (!anchor || !section) {
         unpaint();
@@ -157,6 +169,21 @@ export function createReadingPainter(follow: () => boolean): ReadingPainter {
       else if (following) sentence.startContainer.parentElement?.scrollIntoView({ block: "center" });
     },
 
+    positionAt(view, x, y) {
+      const container = view.previewMode.containerEl;
+      const caret = caretAt(container.ownerDocument, x, y);
+      if (!caret) return null;
+      const el = sectionsIn(container).find((candidate) => candidate.contains(caret.node));
+      const section = el && sectionOf(el);
+      if (!section) return null;
+      const shown = shownText(section.el);
+      const nodeIndex = shown.nodes.indexOf(caret.node);
+      if (nodeIndex === -1) return null;
+      const spoken = sectionSpoken(reading(section.text).passages, section.from, section.to);
+      const at = alignSpoken(spoken.text, shown.text);
+      return offsetAtShown(spoken, at, (shown.starts[nodeIndex] ?? 0) + caret.offset);
+    },
+
     clear() {
       unpaint();
       watch(null);
@@ -164,6 +191,14 @@ export function createReadingPainter(follow: () => boolean): ReadingPainter {
       rerendered = false;
     },
   };
+}
+
+/** The text node under a point and the character offset in it, or null when there is no text there. */
+function caretAt(doc: Document, x: number, y: number): { node: Text; offset: number } | null {
+  const range = doc.caretRangeFromPoint(x, y);
+  const node = range?.startContainer;
+  if (!range || !node || node.nodeType !== Node.TEXT_NODE) return null;
+  return { node: node as Text, offset: range.startOffset };
 }
 
 /** The text of a rendered section, node by node, with a line break where one block ends and the next begins. */

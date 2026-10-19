@@ -14,6 +14,8 @@ export interface Settings {
   rate: number;
   /** Scroll the note to keep the spoken sentence on screen. */
   follow: boolean;
+  /** While playing, a click on a sentence moves the playhead to it. */
+  clickToListen: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +24,7 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceName: "Harper",
   rate: 1,
   follow: true,
+  clickToListen: true,
 };
 
 export interface SettingsHost {
@@ -95,6 +98,16 @@ export class SpeechifySettingTab extends PluginSettingTab {
       .addToggle((toggle) =>
         toggle.setValue(host.settings.follow).onChange(async (value) => {
           host.settings.follow = value;
+          await host.saveSettings();
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("Click to listen")
+      .setDesc("While a note is playing, click a sentence to jump to it. Off, clicks only move the cursor.")
+      .addToggle((toggle) =>
+        toggle.setValue(host.settings.clickToListen).onChange(async (value) => {
+          host.settings.clickToListen = value;
           await host.saveSettings();
         }),
       );

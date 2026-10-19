@@ -4,6 +4,11 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
+Version 0.1.6, released 2026-10-19: tables are read, a row at a time, and
+a click on a sentence while a note plays moves the playhead to it, in the
+editor and in Reading view, with a setting to turn it off. A support
+question on 2026-10-19 prompted both: a user's tables were not being read.
+
 Version 0.1.5, released 2026-10-15: every request carries
 `Speechify-Caller: obsidian` and the plugin's version, so the traffic shows
 in Speechify's analytics. Workspaces that first called the API from an
@@ -90,6 +95,49 @@ three sentence-case checks of which two want "Speechify" in lowercase, the
 settings tab not using `getSettingDefinitions()`, and a bare `setTimeout` in
 `src/speechify.ts`, which the tests load without a `window`.
 
+## Verified on 2026-10-19: tables and click to listen
+
+In Obsidian 1.14.4 on macOS, in a throwaway instance, against the stub
+backend with a word every 500 ms, on a note with a two-column table between
+two paragraphs.
+
+- Unit tests: 94 passing. The source map holds through a table: a pipe
+  between cells maps to itself as a space, an escaped pipe is read as a pipe,
+  a bare URL or a backtick in a cell reaches no further than the cell.
+- The table was requested as "Name Value", "Alpha Beta", "Gamma Delta",
+  one passage a row, the delimiter row never. In Source mode the sentence
+  highlight covers the row. In Reading view it covers the cells of the row
+  across the cell boundary. In Live Preview the table is a widget and shows
+  no highlight, as with callouts.
+- Clicks during playback, sent as real mouse events: in Source mode a click
+  on a word moved the playhead to its sentence, a click on a table row to
+  that row, a click back on the first sentence to it, and the cursor moved
+  with each. The same in Live Preview. In Reading view the same three,
+  painted through the CSS highlights.
+- A click inside Live Preview's table widget lands on the row clicked, header
+  included: `posAtCoords` inside the widget gives the position after the
+  table, so the row's index is mapped to its line instead. This leans on
+  Obsidian's `.cm-table-widget` class; if that goes, the click falls back to
+  the paragraph after the table.
+- Paused, a click moved nothing and playback stayed paused. A drag that
+  selected text, in the editor and in Reading view, selected it and moved
+  nothing.
+- With two paragraphs typed above the playhead during playback, a click on
+  the last sentence landed on it, and a click on one of the new paragraphs
+  played it.
+- Switching between Live Preview and Reading view during playback did not
+  stop it.
+- Not checked: a click on a link or a checkbox (ignored by selector), a
+  table inside a callout, a right-to-left table, the setting switched off
+  (it is read on every click and nothing else), a real Speechify voice
+  reading a row.
+
+A Codex review of the first build found two defects, both confirmed and
+fixed the same day: a bare URL in a cell with no spaces around its pipes
+swallowed the rest of the row, and a click after an edit that landed
+nowhere replaced the passages and reset edit tracking while the old audio
+played on.
+
 ## Verified on 2026-10-13: the voice picker
 
 In Obsidian 1.14.4, in a throwaway instance, with a made-up catalogue and
@@ -161,8 +209,12 @@ marks, so the timings are not Speechify's.
 - Reading view: no "listen from here", so it starts from the top. A footnote
   definition is read but not highlighted, because Obsidian renders it in a
   footnotes section that reports the note's last line as its source.
-- Callouts in Live Preview are read but not highlighted, because Live
-  Preview draws them as a widget.
+- Callouts and tables in Live Preview are read but not highlighted, because
+  Live Preview draws them as widgets.
+- A table row is spoken as its cells run together, "Alpha Beta", with
+  nothing to say which column a cell is in. Saying the header before each
+  cell would speak words that are not at that place in the note; it needs a
+  source map that can repeat a range before it can be considered.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
@@ -211,3 +263,12 @@ that cost time the first time:
 - Without a key, assign `plugin.config` a function returning a `TtsConfig`
   whose `http` answers with a silent WAV in `audio_data` and one word mark
   per word. Playback and highlighting then run with no request to Speechify.
+- A top-level `const` in one `Runtime.evaluate` stays declared for the next
+  one and makes it throw. Wrap each expression in an IIFE.
+- Real clicks go through `Input.dispatchMouseEvent` (pressed then released,
+  `button: "left"`, `clickCount: 1`) at the coordinates `coordsAtPos` or a
+  text node's `Range.getBoundingClientRect()` gives. A `click()` on an
+  element has no coordinates and finds no position.
+- Node 22 and later has `WebSocket` built in, so a CDP driver is one short
+  `.mjs` file: fetch `/json`, open the page's `webSocketDebuggerUrl`, send
+  `{id, method, params}`.

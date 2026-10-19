@@ -10,14 +10,14 @@ import {
 
 const spoken = (source: string, limit?: number): string[] => toPassages(source, limit).map((p) => p.text);
 
-/** Every spoken character must be the note's character at its mapped offset. */
+/** Every spoken character must be the note's character at its mapped offset. A space may stand for a newline or a cell's pipe. */
 function expectFaithful(source: string, passages: Passage[]): void {
   for (const passage of passages) {
     expect(passage.map).toHaveLength(passage.text.length);
     for (let i = 0; i < passage.text.length; i++) {
       const original = source[passage.map[i]!]!;
       const ch = passage.text[i]!;
-      if (ch === " ") expect(/\s/.test(original)).toBe(true);
+      if (ch === " ") expect(/[\s|]/.test(original)).toBe(true);
       else expect(original).toBe(ch);
       if (i > 0) expect(passage.map[i]!).toBeGreaterThan(passage.map[i - 1]!);
     }
@@ -49,13 +49,35 @@ describe("toPassages: blocks", () => {
     expect(spoken("Before.\n```\nnever closed")).toEqual(["Before."]);
   });
 
-  it("skips tables, with or without outer pipes", () => {
-    expect(spoken("A.\n\n| h | i |\n| - | - |\n| 1 | 2 |\n\nB.")).toEqual(["A.", "B."]);
-    expect(spoken("A.\n\nName | Value\n--- | ---\nAlpha | Beta\nGamma | Delta\n\nB.")).toEqual(["A.", "B."]);
-    expect(spoken("A.\n\n| only |\n| --- |\n| cell |\nB.")).toEqual(["A.", "B."]);
-    expect(spoken("> | h | i |\n> | - | - |\n> | 1 | 2 |\n> After.")).toEqual(["After."]);
+  it("reads a table row by row, cells in order, without the delimiter row", () => {
+    expect(spoken("A.\n\n| h | i |\n| - | - |\n| 1 | 2 |\n\nB.")).toEqual(["A.", "h i", "1 2", "B."]);
+    expect(spoken("A.\n\nName | Value\n--- | ---\nAlpha | Beta\nGamma | Delta\n\nB.")).toEqual([
+      "A.",
+      "Name Value",
+      "Alpha Beta",
+      "Gamma Delta",
+      "B.",
+    ]);
+    expect(spoken("A.\n\n| only |\n| --- |\n| cell |\nB.")).toEqual(["A.", "only", "cell", "B."]);
+    expect(spoken("> | h | i |\n> | - | - |\n> | 1 | 2 |\n> After.")).toEqual(["h i", "1 2", "After."]);
+    // Cells need no spaces around their pipes, and an empty cell says nothing.
+    expect(spoken("|a|b|\n|-|-|\n|c||d|\n| | |")).toEqual(["a b", "c d"]);
     // A pipe in prose is not a table.
     expect(spoken("Either this | or that.")).toEqual(["Either this | or that."]);
+  });
+
+  it("reads markup inside a cell, and an escaped pipe as itself", () => {
+    const source = "| **Bold** | [[Note\\|alias]] | a \\| b | [x](https://y) |\n| - | - | - | - |";
+    const passages = toPassages(source);
+    expect(passages.map((p) => p.text)).toEqual(["Bold alias a | b x"]);
+    expectFaithful(source, passages);
+  });
+
+  it("ends a cell at its pipe, whatever is inside it", () => {
+    // A bare URL, a dollar sign, an angle bracket or a backtick in one cell reaches no further than the cell.
+    expect(spoken("|Site|Name|\n|---|---|\n|https://example.com|Alice|")).toEqual(["Site Name", "Alice"]);
+    // A lone backtick is dropped, as it is in prose.
+    expect(spoken("|$5|$6|\n|-|-|\n|<b|c>|\n|`a|b`|")).toEqual(["$5 $6", "<b c>", "a b"]);
   });
 
   it("skips indented code, but not an indented line inside a list or a paragraph", () => {
@@ -145,6 +167,10 @@ describe("the source map", () => {
     "and [[Target|an alias]] wrapped.",
     "",
     "- item `code` %%gone%% here ^id1",
+    "",
+    "| Col | Other |",
+    "| --- | ----- |",
+    "| one | two   |",
   ].join("\n");
 
   it("maps every spoken character to the same character in the note", () => {
@@ -153,6 +179,8 @@ describe("the source map", () => {
       "A Title",
       "First bold line with a link and an alias wrapped.",
       "item code here",
+      "Col Other",
+      "one two",
     ]);
     expectFaithful(source, passages);
   });

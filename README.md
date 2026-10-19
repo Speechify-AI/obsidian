@@ -48,6 +48,9 @@ tells you how many voices it can use.
   says the current sentence again in the new one.
 - The speed button offers 0.75× to 3×. Speed changes apply at once and cost
   nothing, because the audio element does it.
+- While it plays, click a sentence to jump to it, in the editor or in Reading
+  view. If you edit while you listen and would rather clicks only moved the
+  cursor, turn off **Click to listen** in the settings.
 
 Every action is also a command, so you can give it a hotkey: Play or pause,
 Listen from cursor, Stop, Next sentence, Previous sentence, Speed up, Slow
@@ -55,20 +58,23 @@ down, Choose voice.
 
 ## What is read
 
-Headings, paragraphs, list items, quotes, callouts and footnote text. Links
-are read as their text, wikilinks as what Obsidian shows for them, and tags
-as their name.
+Headings, paragraphs, list items, quotes, callouts, footnote text and
+tables. Links are read as their text, wikilinks as what Obsidian shows for
+them, and tags as their name. A table is read a row at a time, the cells of
+each row in order, the header row first; nothing says which column a cell
+is in, because the plugin never speaks a word that is not in the note.
 
-Not read: properties, code blocks, tables, math, comments, images and embeds,
-link targets, bare URLs, footnote markers and block ids.
+Not read: properties, code blocks, math, comments, images and embeds, link
+targets, bare URLs, footnote markers and block ids.
 
 ## Limits
 
 - Highlighting works in Live Preview, Source mode and Reading view. Reading
   view always starts from the top of the note, and footnote text is read
   there without a highlight.
-- Live Preview draws callouts as a block of its own, so the highlight does
-  not show inside one unless your cursor is in it. Source mode shows it.
+- Live Preview draws callouts and tables as blocks of its own, so the
+  highlight does not show inside one unless your cursor is in it. Source
+  mode and Reading view show it.
 - The first audio arrives about one to three seconds after you press play.
   After that the plugin renders ahead of the playhead and playback is
   continuous.

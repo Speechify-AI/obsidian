@@ -78,6 +78,25 @@ export function sectionSpoken(passages: readonly Passage[], from: number, to: nu
   return out;
 }
 
+/**
+ * The note offset behind a click at `index` of the shown text: the spoken
+ * character shown there or the nearest one before it, so a click past the end
+ * of a line lands in that line's sentence. Before the first one, the first.
+ */
+export function offsetAtShown(spoken: SectionSpoken, at: Int32Array, index: number): number | null {
+  let before = -1;
+  let after = -1;
+  for (let i = 0; i < spoken.source.length; i++) {
+    const offset = spoken.source[i] ?? -1;
+    const shown = at[i] ?? -1;
+    if (offset === -1 || shown === -1) continue;
+    if (shown <= index) before = offset;
+    else if (after === -1) after = offset;
+  }
+  if (before !== -1) return before;
+  return after === -1 ? null : after;
+}
+
 /** The stretch of shown text behind a note range, from its first character found to its last. */
 export function shownSpan(spoken: SectionSpoken, at: Int32Array, range: SourceRange): SourceRange | null {
   let first = -1;

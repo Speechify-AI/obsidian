@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { alignSpoken, sectionSpoken, shownSpan } from "./align.ts";
+import { alignSpoken, offsetAtShown, sectionSpoken, shownSpan } from "./align.ts";
 import { toPassages } from "./speakable.ts";
 
 /** What Reading view shows for the part of `note` that reads `phrase`, given the section's text on screen. */
@@ -11,6 +11,27 @@ function shownFor(note: string, shown: string, phrase: string): string | null {
   const span = shownSpan(spoken, alignSpoken(spoken.text, shown), { from, to });
   return span && shown.slice(span.from, span.to);
 }
+
+describe("offsetAtShown", () => {
+  const note = "See **the** map.\n\nThen go.";
+  const shown = "See the map.\nThen go.";
+  const spoken = sectionSpoken(toPassages(note), 0, note.length);
+  const at = alignSpoken(spoken.text, shown);
+  const clicked = (index: number): string => note.slice(offsetAtShown(spoken, at, index)!, offsetAtShown(spoken, at, index)! + 3);
+
+  it("lands on the character under the click, markup or not", () => {
+    expect(clicked(shown.indexOf("the"))).toBe("the");
+    expect(clicked(shown.indexOf("go"))).toBe("go.");
+  });
+
+  it("lands in the sentence before a click past its end", () => {
+    expect(clicked(shown.indexOf("\n"))).toBe(".\n\n");
+  });
+
+  it("finds nothing for a screen with none of the spoken words", () => {
+    expect(offsetAtShown(spoken, alignSpoken(spoken.text, "xyz"), 0)).toBeNull();
+  });
+});
 
 describe("alignSpoken", () => {
   it("finds each word where the screen has it, markup gone", () => {
