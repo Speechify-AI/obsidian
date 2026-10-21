@@ -168,15 +168,18 @@ export interface Voice {
 }
 
 /**
- * The roster: the `*_32` voices on simba-3.2. The catalogue carries no flag
- * for them, but the suffix is how Speechify names the voices trained for
- * that model. Between 2026-09-08 and 2026-09-22 they were also the only
- * voices whose speech marks reached the last word; stock voices are fine
- * again since, clones still unchecked.
- * Other models have no roster here.
+ * The roster: the `*_32` voices, on simba-3.2 and simba-3.5. The catalogue
+ * carries no flag for them, but the suffix is how Speechify names the voices
+ * trained for 3.2, and every one of them lists 3.5 too; 3.5 has no roster
+ * of its own (no `*_35` voice existed on 2026-10-21, across 1,106 voices).
+ * Between 2026-09-08 and 2026-09-22 they were also the only voices whose
+ * speech marks reached the last word; stock voices are fine again since,
+ * clones still unchecked. Other models have no roster here.
  */
+const ROSTER_MODELS = new Set(["simba-3.2", "simba-3.5"]);
+
 export function isFeatured(id: string, model: string | undefined): boolean {
-  return model === "simba-3.2" && /_32$/.test(id);
+  return model !== undefined && ROSTER_MODELS.has(model) && /_32$/.test(id);
 }
 
 export interface RawVoice {

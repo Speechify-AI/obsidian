@@ -27,7 +27,7 @@ import { checkKey, type Http, type KeyCheck, listVoices, type TtsConfig, type Vo
 import { VoiceModal } from "./voices.ts";
 
 const API_BASE = "https://api.speechify.ai";
-const MODEL = "simba-3.2";
+const MODEL = "simba-3.5";
 const ICON = "speechify";
 /** The Speechify mark, drawn for the 100-unit box Obsidian's icons use. */
 const ICON_SVG =

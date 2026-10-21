@@ -4,6 +4,13 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
+Version 0.1.7, released 2026-10-21: the model is `simba-3.5`, Speechify's
+recommended one. Every voice on a key can read on it, in 48 languages, where
+3.2 took English voices only; the eight `*_32` voices stay at the top of the
+picker. Marks and latency were checked against the live API before the
+move, below. Renders are keyed by model, so each note is rendered once more
+on first replay.
+
 Version 0.1.6, released 2026-10-19: tables are read, a row at a time, and
 a click on a sentence while a note plays moves the playhead to it, in the
 editor and in Reading view, with a setting to turn it off. A support
@@ -24,7 +31,7 @@ the community directory.
 | Thing | Value |
 | --- | --- |
 | Plugin id | `speechify` |
-| Model | `simba-3.2`, fixed in `src/main.ts` |
+| Model | `simba-3.5`, fixed in `src/main.ts`; 3.2 until 2026-10-21 |
 | Default voice | `harper_32` |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
 | Platforms | Desktop only (`isDesktopOnly: true`) until mobile is tested |
@@ -192,6 +199,47 @@ marks, so the timings are not Speechify's.
   the editor and back while paused shows the highlight in each. Stop and
   disabling the plugin leave no highlight registered.
 
+## Verified on 2026-10-21: simba-3.5
+
+Against the live API, with the key of a Speechify workspace, before the
+model moved from `simba-3.2`:
+
+- `GET /v1/audio/models` lists `simba-3.5` as recommended, 48 languages,
+  not English-only, on /speech, /stream and /stream/with-timestamps.
+  `simba-3.0` is still the default when `model` is omitted. `simba-english`
+  and `simba-multilingual` are retired, sunset 2026-11-21.
+- Every one of the 1,106 voices on the key lists `simba-3.5`, against 125
+  for 3.2, so the picker offers nine times as many rows, 981 of them in
+  languages other than English. The eight `*_32` voices all list 3.5 and no
+  `*_35` voice exists, so they stay the roster. The picker shows 200 rows
+  at most, which is why the roster and the search matter.
+- Marks on 3.5 have the same shape as on 3.2 and count code points: in a
+  32-code-point sentence with an accent, an emoji and curly quotes, every
+  offset matched by code point and the ones after the emoji were one short
+  by UTF-16 unit. `billable_characters_count` was the code point count. The
+  emoji again got no mark.
+- Latency for that sentence: 1.16 s on 3.5, 1.12 s on 3.2, one run each.
+- A Hindi voice (`aadi`, hi-IN) read a Hindi and English line on 3.5 with
+  no `language` sent, with a mark per word. The same voice on 3.2 is a 400,
+  "supports English voices only".
+- The request body is unchanged: `language` is not sent, so 3.5 routes by
+  the voice's locale. Unit tests: 94 passing.
+
+In Obsidian 1.14.4, in the throwaway instance, with the same key:
+
+- The picker opened 612 ms after the command, fetch and first paint
+  together, with 1,106 voices in 51 locales. It shows 200 rows; the eight
+  roster voices come first, then the rest A to Z, Telugu and Hindi voices
+  from row nine. Every locale had a name from `Intl.DisplayNames`.
+- Searches: "hindi" 42 voices, "french" 53, "male british" 18 (as on
+  2026-10-01), "harper" 2 (an American and a British one), nonsense none.
+- Choosing Aadi (Hindi) and playing the English test note: first word
+  highlight at 1.5 s, sentence and word highlights in place, the bar
+  naming the voice, nothing left after stop.
+
+Not tried: a cloned voice, and `language` for a note whose language is
+not the voice's.
+
 ## Not verified
 
 - Mobile, at all.
@@ -201,7 +249,8 @@ marks, so the timings are not Speechify's.
 - Cloned voices. The test key has none.
 - The cache's 400 MB prune. It runs at startup and after every 20 MB
   written, and has never been run against a full cache.
-- Languages other than English, and right-to-left text.
+- Languages other than English in Obsidian, and right-to-left text. One
+  Hindi line rendered with word marks on the API alone.
 
 ## Open
 

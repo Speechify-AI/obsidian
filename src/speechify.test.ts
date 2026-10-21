@@ -49,8 +49,9 @@ describe("toVoice", () => {
     });
   });
 
-  it("features the roster suffix on simba-3.2 only, never a clone", () => {
+  it("features the roster suffix on simba-3.2 and simba-3.5 only, never a clone", () => {
     expect(toVoice({ id: "wyatt_32" }, "simba-3.2")?.featured).toBe(true);
+    expect(toVoice({ id: "wyatt_32" }, "simba-3.5")?.featured).toBe(true);
     expect(toVoice({ id: "wyatt_32" }, "simba-3.0")?.featured).toBe(false);
     expect(toVoice({ id: "wyatt" }, "simba-3.2")?.featured).toBe(false);
     expect(toVoice({ id: "mine_32", type: "personal" }, "simba-3.2")?.featured).toBe(false);
@@ -74,7 +75,7 @@ describe("normalizeVoicePage and sortVoices", () => {
   });
 });
 
-const base = { apiBase: "https://api.test", apiKey: "k".repeat(24), model: "simba-3.2" };
+const base = { apiBase: "https://api.test", apiKey: "k".repeat(24), model: "simba-3.5" };
 
 describe("synthesize", () => {
   it("posts the passage and decodes audio and marks", async () => {
@@ -92,7 +93,7 @@ describe("synthesize", () => {
     };
     const out = await synthesize("Hello", { ...base, voiceId: "harper_32", http });
     expect(seen[0]!.url).toBe("https://api.test/v1/audio/speech");
-    expect(JSON.parse(seen[0]!.body!)).toEqual({ input: "Hello", voice_id: "harper_32", model: "simba-3.2", audio_format: "mp3" });
+    expect(JSON.parse(seen[0]!.body!)).toEqual({ input: "Hello", voice_id: "harper_32", model: "simba-3.5", audio_format: "mp3" });
     expect(Array.from(out.audio.slice(0, 2))).toEqual([0xff, 0xfb]);
     expect(out.charsBilled).toBe(5);
     expect(out.marks).toEqual([{ start: 0, end: 5, startMs: 0, endMs: 300 }]);
@@ -142,7 +143,7 @@ describe("withCaller", () => {
 describe("listVoices and checkKey", () => {
   const page = (ids: string[], cursor: string | null) =>
     JSON.stringify({
-      voices: ids.map((id) => ({ id, models: [{ name: id.startsWith("old") ? "simba-3.0" : "simba-3.2" }] })),
+      voices: ids.map((id) => ({ id, models: [{ name: id.startsWith("old") ? "simba-3.2" : "simba-3.5" }] })),
       has_more: cursor !== null,
       next_cursor: cursor,
     });

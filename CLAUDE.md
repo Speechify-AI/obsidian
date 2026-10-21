@@ -4,7 +4,7 @@
 and how to test in a real Obsidian without touching anyone's vault. This file
 is the rules; the runbook is the state.
 
-An Obsidian plugin that reads a note aloud in a Speechify voice on simba-3.2
+An Obsidian plugin that reads a note aloud in a Speechify voice on simba-3.5
 and highlights the spoken sentence and word in the editor. Official Speechify
 plugin, in its own repo, depending on nothing outside it. The speech modules
 came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
