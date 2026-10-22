@@ -25,8 +25,11 @@ that whiten it. 0.1.3 went out the same day with
 voice avatars and a picker styled after Speechify's, 0.1.2 the same day with 10-second jumps
 on the bar and Speechify's icons, 0.1.1 on 2026-10-03 with highlighting in Reading
 view, and 0.1.0 on 2026-10-01, the day the repo at
-<https://github.com/Speechify-AI/obsidian> went public. Not yet submitted to
-the community directory.
+<https://github.com/Speechify-AI/obsidian> went public. Listed in the
+community directory at <https://community.obsidian.md/plugins/speechify>;
+329 installs on 2026-10-22. The directory serves each release from its
+GitHub tag, which must equal the manifest version, no `v`, with `main.js`,
+`manifest.json` and `styles.css` attached.
 
 | Thing | Value |
 | --- | --- |
@@ -267,10 +270,6 @@ not the voice's.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
-- Submit at <https://community.obsidian.md>: sign in, connect GitHub, then
-  New plugin with the repo URL. The `0.1.0` release it needs exists. Each
-  later release needs a tag equal to the manifest version, no `v`, with
-  `main.js`, `manifest.json` and `styles.css` attached.
 - Mobile: test on a phone, then set `isDesktopOnly` back to `false`. No
   code needs desktop.
 - Readback and Soundbites share the code point bug: neither converts mark

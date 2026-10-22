@@ -10,8 +10,12 @@ with the text.
 
 ## Install
 
-The plugin is not in the community directory yet. Until it is, build it and
-copy three files into your vault:
+In Obsidian, open Settings, Community plugins, Browse, search for
+**Speechify** and install it, or open
+<https://community.obsidian.md/plugins/speechify>. Then turn it on under
+Settings, Community plugins. It needs Obsidian 1.11.4 or later.
+
+To run a build of your own instead, copy three files into your vault:
 
 ```sh
 git clone https://github.com/Speechify-AI/obsidian.git
@@ -21,9 +25,6 @@ npm run build
 mkdir -p <vault>/.obsidian/plugins/speechify
 cp main.js manifest.json styles.css <vault>/.obsidian/plugins/speechify/
 ```
-
-Then turn on **Speechify** under Settings, Community plugins. It needs
-Obsidian 1.11.4 or later.
 
 ## Set up
 
