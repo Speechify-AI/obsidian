@@ -42,11 +42,29 @@ describe("renderPassage", () => {
     expect(calls).toBe(1);
   });
 
-  it("keys on voice and model as well as text", async () => {
+  it("keys on voice, model and language as well as text", async () => {
     const a = await renderKey("x", "harper_32", "simba-3.2");
     expect(await renderKey("x", "geffen_32", "simba-3.2")).not.toBe(a);
     expect(await renderKey("x", "harper_32", "simba-3.3")).not.toBe(a);
     expect(await renderKey("y", "harper_32", "simba-3.2")).not.toBe(a);
+    expect(await renderKey("x", "harper_32", "simba-3.2", "fr")).not.toBe(a);
     expect(await renderKey("x", "harper_32", "simba-3.2")).toBe(a);
+  });
+
+  it("keeps the key a render had before languages were sent", async () => {
+    expect(await renderKey("x", "harper_32", "simba-3.5")).toBe(await renderKey("x", "harper_32", "simba-3.5", undefined));
+  });
+
+  it("renders the same text once per language", async () => {
+    const cache = memoryCache();
+    let calls = 0;
+    const synth = async (input: string) => {
+      calls++;
+      return fakeSynth(input);
+    };
+    await renderPassage("Chat.", cfg, cache, synth);
+    await renderPassage("Chat.", { ...cfg, language: "fr" }, cache, synth);
+    await renderPassage("Chat.", { ...cfg, language: "fr" }, cache, synth);
+    expect(calls).toBe(2);
   });
 });

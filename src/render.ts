@@ -2,10 +2,10 @@
  * Turning one passage into audio plus marks, once.
  *
  * Text is the source of truth and audio is a cache over it. A render is
- * keyed by the hash of the passage text plus the voice and model that
- * produced it, so replaying a note never bills twice, editing one paragraph
- * leaves its neighbours' audio alone, and switching voice re-renders rather
- * than serving the wrong narrator.
+ * keyed by the hash of the passage text plus the voice, model and language
+ * that produced it, so replaying a note never bills twice, editing one
+ * paragraph leaves its neighbours' audio alone, and switching voice
+ * re-renders rather than serving the wrong narrator.
  */
 import { fillGaps, type Mark } from "./marks.ts";
 import { synthesize, type TtsConfig, type TtsResult } from "./speechify.ts";
@@ -25,10 +25,11 @@ export interface RenderCache {
 
 export type Synth = (input: string, cfg: TtsConfig) => Promise<TtsResult>;
 
-export async function renderKey(text: string, voiceId: string, model: string): Promise<string> {
+/** A render with no language keeps the key it had before languages were sent, so nothing already cached is rendered again. */
+export async function renderKey(text: string, voiceId: string, model: string, language?: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
-  return `${model}/${voiceId}/${hash}`;
+  return language === undefined ? `${model}/${voiceId}/${hash}` : `${model}/${voiceId}/${language}/${hash}`;
 }
 
 export async function renderPassage(
@@ -37,7 +38,7 @@ export async function renderPassage(
   cache: RenderCache,
   synth: Synth = synthesize,
 ): Promise<Rendered> {
-  const key = await renderKey(text, cfg.voiceId, cfg.model);
+  const key = await renderKey(text, cfg.voiceId, cfg.model, cfg.language);
   const cached = await cache.get(key);
   if (cached) return cached;
 

@@ -68,6 +68,28 @@ is in, because the plugin never speaks a word that is not in the note.
 Not read: properties, code blocks, math, comments, images and embeds, link
 targets, bare URLs, footnote markers and block ids.
 
+## Languages
+
+The plugin works out the language of each paragraph from its text. A
+paragraph in another language than your voice's is read by Speechify's
+top voice for that language, of the same gender as yours, so a French
+quotation in an English note is read by a French narrator and a Hindi
+note by a Hindi one. A heading or a one-word list item, which says too
+little on its own, takes the language of the paragraph after it.
+
+A cloned voice is never swapped, because you cloned it to sound like
+itself; it reads every language in its own accent. The **Other languages**
+setting chooses between a native voice, your voice told the language so
+the words are said right in its own accent, and off, where every paragraph
+is read as your voice's language.
+
+To set a note's language yourself, give it a `lang` property: `lang: fr`,
+or `lang: pt-BR`. It stands for every paragraph that does not clearly read
+as something else, and it counts even with **Other languages** off.
+
+Not told apart: Bosnian and Serbian in Latin script from Croatian, and
+Malay from Indonesian. A `lang` property settles those.
+
 ## Limits
 
 - Highlighting works in Live Preview, Source mode and Reading view. Reading

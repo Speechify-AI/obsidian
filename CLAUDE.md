@@ -35,8 +35,11 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
   `PASSAGE_LIMIT` makes the start slower; the numbers are in
   `src/speakable.ts`.
 - **Text is the truth, audio is a cache over it.** A render is keyed by
-  `sha256(text)`, voice and model. Replaying never bills, and switching voice
-  re-renders instead of serving the wrong narrator.
+  `sha256(text)`, voice, model and the `language` sent. Replaying never
+  bills, and switching voice re-renders instead of serving the wrong
+  narrator. `language` goes on a request only when the text is not in the
+  voice's own language (`languageToSend`), which is what the API assumes
+  anyway, so a render made before languages were sent keeps its key.
 - **A render under way is never abandoned.** Dropping the connection does
   not cancel a /speech request and it is billed either way, so it finishes
   and lands in the cache. For the same reason the look-ahead stays small.
@@ -76,6 +79,8 @@ came from Readback (<https://github.com/Speechify-AI/readback>) as copies.
 - `src/player.ts`: playback, look-ahead, the highlight loop, following
   edits
 - `src/speakable.ts`: markdown to passages with a source map (tested)
+- `src/language.ts`: which language each block is in, from its text or the
+  note's `lang` property, and whether to send it (tested)
 - `src/highlight.ts`: the CodeMirror field: two mark decorations and the
   edit tracking
 - `src/reading.ts`: the same two highlights in Reading view, and following

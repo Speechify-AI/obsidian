@@ -11,20 +11,32 @@ export interface Settings {
   keySecret: string;
   voiceId: string;
   voiceName: string;
+  /** The voice's own language, which a passage in that language need not name. */
+  voiceLocale: string;
   rate: number;
   /** Scroll the note to keep the spoken sentence on screen. */
   follow: boolean;
   /** While playing, a click on a sentence moves the playhead to it. */
   clickToListen: boolean;
+  /**
+   * A block in another language than the voice's: handed to Speechify's
+   * pick for that language ("native", never for a clone), read by the
+   * voice told the language ("voice"), or not told apart at all ("off").
+   */
+  otherLanguages: OtherLanguages;
 }
+
+export type OtherLanguages = "native" | "voice" | "off";
 
 export const DEFAULT_SETTINGS: Settings = {
   keySecret: "",
   voiceId: "harper_32",
   voiceName: "Harper",
+  voiceLocale: "en-US",
   rate: 1,
   follow: true,
   clickToListen: true,
+  otherLanguages: "native",
 };
 
 export interface SettingsHost {
@@ -110,6 +122,19 @@ export class SpeechifySettingTab extends PluginSettingTab {
           host.settings.clickToListen = value;
           await host.saveSettings();
         }),
+      );
+
+    new Setting(containerEl)
+      .setName("Other languages")
+      .setDesc("Who reads a paragraph in a language other than your voice's. A native voice is Speechify's top voice for that language, of your voice's gender; a cloned voice is never handed off. A lang property on a note names its language either way.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({ native: "A native voice", voice: "Your voice, in that language", off: "Off" })
+          .setValue(host.settings.otherLanguages)
+          .onChange(async (value) => {
+            host.settings.otherLanguages = value === "voice" || value === "off" ? value : "native";
+            await host.saveSettings();
+          }),
       );
   }
 }

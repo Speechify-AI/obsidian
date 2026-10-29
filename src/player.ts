@@ -9,6 +9,11 @@
  * each passage boundary the note is read again if it changed, so what is
  * read next is what the note says now.
  *
+ * Each passage is sent with the language its block is written in, when that
+ * is not the voice's own (see language.ts), so a French paragraph in an
+ * English note is read as French, and in a voice from that language when the
+ * host offers one.
+ *
  * A render that is under way is never abandoned. Closing the connection does
  * not cancel a /v1/audio/speech request and it is billed either way, so it
  * runs to the end and lands in the cache.
@@ -23,6 +28,7 @@ import {
   toCurrentPosition,
   type Highlight,
 } from "./highlight.ts";
+import { languageToSend, type Spoken, withLanguages } from "./language.ts";
 import { markAtTime, timeSentences, type TimedRange } from "./marks.ts";
 import { renderKey, renderPassage, type RenderCache, type Rendered } from "./render.ts";
 import { JUMP_MS, jumpTarget, sentenceAtOffset, sentenceAtTime, skipTarget } from "./seek.ts";
@@ -32,7 +38,6 @@ import {
   sourceRange,
   spokenOffsetAt,
   toPassages,
-  type Passage,
   type SourceRange,
 } from "./speakable.ts";
 import { TtsError, type TtsConfig } from "./speechify.ts";
@@ -50,6 +55,12 @@ export interface PlayerHost {
   cache: RenderCache;
   /** Keep the spoken sentence on screen? */
   follow(): boolean;
+  /** Read each block in the language it is written in? */
+  detectLanguage(): boolean;
+  /** The chosen voice's locale, "en-US"; a passage in that language is sent without one. */
+  voiceLocale(): string;
+  /** A voice from `language` to read a block in it with, or null to keep the chosen voice. */
+  voiceFor(language: string): Promise<{ id: string; locale: string } | null>;
   onState(state: PlayerState): void;
   onError(message: string): void;
   /**
@@ -98,7 +109,7 @@ export const BAR_CLEARANCE_PX = 96;
 
 interface Session {
   view: EditorView;
-  passages: Passage[];
+  passages: Spoken[];
   index: number;
   selection: SourceRange | null;
   /** The passage that is loaded into the audio element, once it is. */
@@ -136,13 +147,19 @@ export function createPlayer(host: PlayerHost): Player {
     host.onState({ status, rate });
   };
 
-  async function render(text: string): Promise<Rendered> {
-    const config = host.config();
-    if (!config) throw new Error("no key");
-    const key = await renderKey(text, config.voiceId, config.model);
+  async function render(passage: Spoken): Promise<Rendered> {
+    const base = host.config();
+    if (!base) throw new Error("no key");
+    const native = passage.language === null ? null : await host.voiceFor(passage.language);
+    const config = {
+      ...base,
+      voiceId: native?.id ?? base.voiceId,
+      language: languageToSend(passage.language, native?.locale ?? host.voiceLocale()),
+    };
+    const key = await renderKey(passage.text, config.voiceId, config.model, config.language);
     let pending = inFlight.get(key);
     if (!pending) {
-      pending = renderPassage(text, config, host.cache).finally(() => inFlight.delete(key));
+      pending = renderPassage(passage.text, config, host.cache).finally(() => inFlight.delete(key));
       inFlight.set(key, pending);
     }
     return pending;
@@ -152,7 +169,7 @@ export function createPlayer(host: PlayerHost): Player {
     for (let ahead = 1; ahead <= LOOK_AHEAD; ahead++) {
       const passage = s.passages[s.index + ahead];
       // A failure here surfaces when the passage is actually played.
-      if (passage) render(passage.text).catch(() => undefined);
+      if (passage) render(passage).catch(() => undefined);
     }
   }
 
@@ -185,7 +202,7 @@ export function createPlayer(host: PlayerHost): Player {
 
     let rendered: Rendered;
     try {
-      rendered = await render(passage.text);
+      rendered = await render(passage);
     } catch (error) {
       if (mine !== turn) return;
       setStatus("paused");
@@ -293,7 +310,7 @@ export function createPlayer(host: PlayerHost): Player {
         ? toCurrentPosition(s.view, (map[map.length - 1] ?? 0) + 1, -1)
         : toCurrentPosition(s.view, map[0] ?? 0, 1);
     s.selection = toCurrent(s.view, s.selection);
-    s.passages = read(s.view, s.selection);
+    s.passages = read(s.view, s.selection, host);
     startTracking(s.view);
 
     const at = passageIndexAt(s.passages, boundary);
@@ -343,7 +360,7 @@ export function createPlayer(host: PlayerHost): Player {
         host.onError("Add your Speechify API key in the plugin's settings to start listening.");
         return false;
       }
-      const passages = read(view, options.selection ?? null);
+      const passages = read(view, options.selection ?? null, host);
       let index = 0;
       let offset = 0;
       if (options.from !== undefined) {
@@ -421,7 +438,7 @@ export function createPlayer(host: PlayerHost): Player {
       // replaces the session's once the click has somewhere to go.
       const edited = s.view.dom.isConnected && hasEdits(s.view);
       const selection = edited ? toCurrent(s.view, s.selection) : s.selection;
-      const passages = edited ? read(s.view, selection) : s.passages;
+      const passages = edited ? read(s.view, selection, host) : s.passages;
       const index = passageIndexAt(passages, position);
       const passage = passages[index];
       if (!passage) return;
@@ -466,12 +483,14 @@ function spokenMs(rendered: Rendered): number {
 }
 
 /** A spoken offset inside a passage's last sentence: where going back lands. */
-function lastOffset(passage: Passage | undefined): number {
+function lastOffset(passage: Spoken | undefined): number {
   return Math.max(0, (passage?.text.length ?? 1) - 1);
 }
 
-function read(view: EditorView, selection: SourceRange | null): Passage[] {
-  const passages = toPassages(view.state.doc.toString());
+/** Languages are assigned before a selection is clipped out, so a selected heading keeps the language of the note around it. */
+function read(view: EditorView, selection: SourceRange | null, host: PlayerHost): Spoken[] {
+  const source = view.state.doc.toString();
+  const passages = withLanguages(toPassages(source), source, host.detectLanguage());
   return selection ? clipPassages(passages, selection.from, selection.to) : passages;
 }
 
@@ -480,7 +499,7 @@ function read(view: EditorView, selection: SourceRange | null): Passage[] {
  * Sentences begin at the space after the last one, and a mark that absorbed
  * a gap can begin at a space too; neither should be painted.
  */
-function trimmedRange(passage: Passage, start: number, end: number): SourceRange | null {
+function trimmedRange(passage: Spoken, start: number, end: number): SourceRange | null {
   const slice = passage.text.slice(start, end);
   const lead = slice.length - slice.trimStart().length;
   return sourceRange(passage, start + lead, start + slice.trimEnd().length);

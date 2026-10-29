@@ -4,6 +4,20 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
+Version 0.1.8, released 2026-10-29: each block is sent with
+the language it is written in, found on the device by `src/language.ts`
+(script first, then weighted function words and marker letters), or set by
+a `lang` property. The language goes on the request only when it is not
+the voice's own, so renders made so far keep their cache keys. Unit
+A block in another language than the voice's is read by Speechify's
+staff pick for that language, matched to the voice's gender, from the
+catalogue's `staff_pick_rank`; a clone is never swapped. One **Other
+languages** dropdown holds the three states: a native voice (the
+default), your voice with `language` on the request, or off, where only a
+`lang` property counts. Unit tests: 159 passing, 58 of them the
+detector, one sample per language. Checked against the live API and in
+the throwaway Obsidian on 2026-10-29, below.
+
 Version 0.1.7, released 2026-10-21: the model is `simba-3.5`, Speechify's
 recommended one. Every voice on a key can read on it, in 48 languages, where
 3.2 took English voices only; the eight `*_32` voices stay at the top of the
@@ -35,7 +49,7 @@ GitHub tag, which must equal the manifest version, no `v`, with `main.js`,
 | --- | --- |
 | Plugin id | `speechify` |
 | Model | `simba-3.5`, fixed in `src/main.ts`; 3.2 until 2026-10-21 |
-| Default voice | `harper_32` |
+| Default voice | `harper_32`; other languages go to the catalogue's staff pick of the same gender |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
 | Platforms | Desktop only (`isDesktopOnly: true`) until mobile is tested |
 | Author in the manifest | Speechify AI, `https://speechify.ai` with listing UTM tags |
@@ -202,6 +216,40 @@ marks, so the timings are not Speechify's.
   the editor and back while paused shows the highlight in each. Stop and
   disabling the plugin leave no highlight registered.
 
+## Verified on 2026-10-29: the language of each block
+
+In the throwaway Obsidian, on `dev-vault/Language test.md` (English, two
+headings, French, German, a list with an English item and a French one,
+Japanese, Hindi, English), with the simba-compare key and Dominic
+(en-US):
+
+- With a fake `http` first, no request billed: the eleven passages went out
+  with no `language` on the English ones and `fr`, `de`, `ja`, `hi` on the
+  rest. This run showed the headings taking the block before them ("Auf
+  Deutsch" as French), so an undecided block now takes the block after it
+  first. Played again, only the three passages whose language changed were
+  requested; the rest came from the cache, keyed per language.
+- Then live: all twelve /speech requests 200, each with a mark per word
+  and the last mark ending at the passage's end, in every language. Marks
+  have the same shape with `language` as without. Playback ran the note
+  through and the bar stayed up.
+- Latency with `language`: 0.8 to 2.2 s for all but two French passages,
+  which took 12.8 s and 14.2 s, the first two French requests of the
+  session. Four fresh renders straight after took 1.2 s and 1.4 s (French),
+  1.8 s (German) and 0.9 s (English, no language), so it did not repeat.
+- `checkKey` on that key: 1,106 voices.
+- Then with native voices: the catalogue fetched once at the first
+  non-English block (502 ms, 176 staff picks across 45 locales), and
+  Dominic (male) handed French to `romain-agent` (fr-FR, pick 2, the first
+  male), German to `henrik-agent` (pick 1), Japanese to `saku` (pick 1),
+  Hindi to `shlok` (pick 2, the first male), each sent with no `language`
+  since the voice is from it. All 200, a mark per word to the end. The
+  English passages came from the cache.
+
+Not heard: nobody listened to the French and German to judge the accent.
+The docs say a voice keeps the accent of its recording, so Dominic reads
+French as an American would.
+
 ## Verified on 2026-10-21: simba-3.5
 
 Against the live API, with the key of a Speechify workspace, before the
@@ -254,6 +302,9 @@ not the voice's.
   written, and has never been run against a full cache.
 - Languages other than English in Obsidian, and right-to-left text. One
   Hindi line rendered with word marks on the API alone.
+- How a non-English block sounds with `language` against without: the
+  requests and marks are verified above, the audio has not been listened
+  to. `dev-vault/Language test.md` is the note for it.
 
 ## Open
 

@@ -6,7 +6,9 @@ import {
   languageName,
   listVoices,
   matchesVoice,
+  nativeVoice,
   normalizeVoicePage,
+  speaksNatively,
   sortVoices,
   synthesize,
   toVoice,
@@ -15,6 +17,7 @@ import {
   withCaller,
   type Http,
   type HttpRequest,
+  type Voice,
 } from "./speechify.ts";
 
 describe("toVoice", () => {
@@ -46,7 +49,9 @@ describe("toVoice", () => {
       preview: "https://x/new.mp3",
       avatar: "https://x/harper.webp",
       featured: true,
+      staffPick: null,
     });
+    expect(toVoice({ id: "romain-agent", staff_pick_rank: 2 })?.staffPick).toBe(2);
   });
 
   it("features the roster suffix on simba-3.2 and simba-3.5 only, never a clone", () => {
@@ -75,6 +80,50 @@ describe("normalizeVoicePage and sortVoices", () => {
   });
 });
 
+describe("nativeVoice", () => {
+  const voice = (id: string, locale: string, gender: Voice["gender"], staffPick: number | null = null, cloned = false): Voice =>
+    ({ id, name: id, locale, cloned, gender, tags: [], preview: null, avatar: null, featured: false, staffPick });
+  const dominic = voice("dominic_32", "en-US", "male", 4);
+  const harper = voice("harper_32", "en-US", "female", 1);
+  const catalogue = [
+    dominic,
+    harper,
+    voice("isabelle-agent", "fr-FR", "female", 1),
+    voice("romain-agent", "fr-FR", "male", 2),
+    voice("pierre", "fr-FR", "male"),
+    voice("rafael", "pt-BR", "male", 1),
+    voice("joana", "pt-PT", "female", 1),
+    voice("tiago", "pt-PT", "male", 2),
+    voice("lakan", "fil-PH", "male", 1),
+    voice("mine", "fr-FR", "male", null, true),
+  ];
+
+  it("takes the staff pick of the voice's gender, else the top pick", () => {
+    expect(nativeVoice("fr", catalogue, dominic)?.id).toBe("romain-agent");
+    expect(nativeVoice("fr", catalogue, harper)?.id).toBe("isabelle-agent");
+    expect(nativeVoice("pt", catalogue, harper)?.id).toBe("joana");
+    expect(nativeVoice("fr", catalogue, voice("x", "en-US", "unspecified"))?.id).toBe("isabelle-agent");
+  });
+
+  it("goes to the region the language names before the gender", () => {
+    expect(nativeVoice("pt-BR", catalogue, harper)?.id).toBe("rafael");
+    expect(nativeVoice("pt-PT", catalogue, dominic)?.id).toBe("tiago");
+  });
+
+  it("keeps the voice for its own language, for a clone, and for a language with no voice", () => {
+    expect(nativeVoice("en", catalogue, dominic)).toBeNull();
+    expect(nativeVoice("en-GB", catalogue, dominic)).toBeNull();
+    expect(nativeVoice("fr", catalogue, voice("me", "en-US", "male", null, true))).toBeNull();
+    expect(nativeVoice("th", catalogue, dominic)).toBeNull();
+  });
+
+  it("never picks a clone, and knows Tagalog voices are filed under fil", () => {
+    expect(nativeVoice("fr", [voice("mine", "fr-FR", "male", null, true), voice("pierre", "fr-FR", "male")], dominic)?.id).toBe("pierre");
+    expect(nativeVoice("tl", catalogue, dominic)?.id).toBe("lakan");
+    expect(speaksNatively("nb-NO", "no")).toBe(true);
+  });
+});
+
 const base = { apiBase: "https://api.test", apiKey: "k".repeat(24), model: "simba-3.5" };
 
 describe("synthesize", () => {
@@ -97,6 +146,18 @@ describe("synthesize", () => {
     expect(Array.from(out.audio.slice(0, 2))).toEqual([0xff, 0xfb]);
     expect(out.charsBilled).toBe(5);
     expect(out.marks).toEqual([{ start: 0, end: 5, startMs: 0, endMs: 300 }]);
+  });
+
+  it("names the language only when one is given", async () => {
+    const seen: HttpRequest[] = [];
+    const http: Http = async (request) => {
+      seen.push(request);
+      return { status: 200, text: JSON.stringify({ audio_data: btoa("x"), speech_marks: null }) };
+    };
+    await synthesize("Bonjour", { ...base, voiceId: "harper_32", language: "fr", http });
+    expect(JSON.parse(seen[0]!.body!)).toMatchObject({ input: "Bonjour", language: "fr" });
+    await synthesize("Hello", { ...base, voiceId: "harper_32", http });
+    expect(JSON.parse(seen[1]!.body!)).not.toHaveProperty("language");
   });
 
   it("throws the status and body on a refusal, without retrying", async () => {

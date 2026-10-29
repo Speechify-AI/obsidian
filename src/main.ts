@@ -23,7 +23,8 @@ import { clampRate, RATE_STEP, rateLabel, RATES } from "./rate.ts";
 import { createReadingPainter } from "./reading.ts";
 import { memoryCache, type RenderCache } from "./render.ts";
 import { DEFAULT_SETTINGS, type Settings, type SettingsHost, SpeechifySettingTab } from "./settings.ts";
-import { checkKey, type Http, type KeyCheck, listVoices, type TtsConfig, type Voice, withCaller } from "./speechify.ts";
+import { languageToSend } from "./language.ts";
+import { checkKey, type Http, type KeyCheck, listVoices, nativeVoice, type TtsConfig, type Voice, withCaller } from "./speechify.ts";
 import { VoiceModal } from "./voices.ts";
 
 const API_BASE = "https://api.speechify.ai";
@@ -90,6 +91,9 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
       config: () => this.config(),
       cache,
       follow: () => this.settings.follow,
+      detectLanguage: () => this.settings.otherLanguages !== "off",
+      voiceLocale: () => this.settings.voiceLocale,
+      voiceFor: (language) => this.voiceFor(language),
       onState: (state) => {
         this.state = state;
         if (state.status === "idle") this.listening = null;
@@ -327,6 +331,7 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
       new VoiceModal(this.app, voices, this.settings.voiceId, (voice) => {
         this.settings.voiceId = voice.id;
         this.settings.voiceName = voice.name;
+        this.settings.voiceLocale = voice.locale;
         void this.saveSettings();
         this.updateBar();
         this.player.voiceChanged();
@@ -335,11 +340,24 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
     });
   }
 
-  /** The voices this key can use, fetched once per key. Null (with a notice) when they cannot be had. */
-  private async loadVoices(): Promise<Voice[] | null> {
+  /**
+   * The voice to read a block in `language` with: Speechify's pick for that
+   * language, when the setting says so and the chosen voice is not from it
+   * and not a clone. The catalogue is fetched the first time a note needs
+   * it; a note in the voice's own language never waits for it.
+   */
+  private async voiceFor(language: string): Promise<{ id: string; locale: string } | null> {
+    if (this.settings.otherLanguages !== "native" || languageToSend(language, this.settings.voiceLocale) === undefined) return null;
+    const voices = await this.loadVoices(true);
+    const current = voices?.find((voice) => voice.id === this.settings.voiceId);
+    return voices && current ? nativeVoice(language, voices, current) : null;
+  }
+
+  /** The voices this key can use, fetched once per key. Null (with a notice, unless `quiet`) when they cannot be had. */
+  private async loadVoices(quiet = false): Promise<Voice[] | null> {
     const apiKey = this.apiKey();
     if (!apiKey) {
-      new Notice("Add your Speechify API key in the plugin's settings to choose a voice.");
+      if (!quiet) new Notice("Add your Speechify API key in the plugin's settings to choose a voice.");
       return null;
     }
     if (this.voices?.key === apiKey) return this.voices.list;
@@ -347,7 +365,7 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
       this.voices = { key: apiKey, list: await listVoices({ apiBase: API_BASE, apiKey, model: MODEL, http: this.http }) };
       return this.voices.list;
     } catch {
-      new Notice("Could not load the voices from Speechify. Check the API key and your connection.");
+      if (!quiet) new Notice("Could not load the voices from Speechify. Check the API key and your connection.");
       return null;
     }
   }

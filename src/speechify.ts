@@ -55,6 +55,8 @@ export interface TtsConfig {
   apiKey: string;
   voiceId: string;
   model: string;
+  /** The language of the input when it is not the voice's own; omitted, the voice's locale decides. */
+  language?: string;
   http: Http;
 }
 
@@ -104,6 +106,7 @@ export async function synthesize(input: string, cfg: TtsConfig): Promise<TtsResu
         voice_id: cfg.voiceId,
         model: cfg.model,
         audio_format: "mp3",
+        ...(cfg.language === undefined ? {} : { language: cfg.language }),
       }),
     });
 
@@ -165,6 +168,8 @@ export interface Voice {
   avatar: string | null;
   /** One of the roster voices the picker puts first. See `isFeatured`. */
   featured: boolean;
+  /** Speechify's rank among its picks for the voice's locale, 1 first; null when it is not a pick. */
+  staffPick: number | null;
 }
 
 /**
@@ -191,6 +196,7 @@ export interface RawVoice {
   tags?: unknown;
   preview_audio?: unknown;
   avatar_image?: unknown;
+  staff_pick_rank?: unknown;
   models?: { name?: string; languages?: { locale?: string; preview_audio?: unknown }[] }[];
 }
 
@@ -240,7 +246,50 @@ export function toVoice(raw: RawVoice, model?: string): Voice | null {
     preview: previewOf(raw, model),
     avatar: typeof raw.avatar_image === "string" && raw.avatar_image !== "" ? raw.avatar_image : null,
     featured: raw.type !== "personal" && isFeatured(raw.id, model),
+    staffPick: typeof raw.staff_pick_rank === "number" ? raw.staff_pick_rank : null,
   };
+}
+
+/** Language codes whose voices the catalogue files under another locale. */
+const LOCALE_ALIASES: Record<string, string[]> = { tl: ["fil"], no: ["nb", "nn"] };
+
+function primaryOf(tag: string): string {
+  return tag.split("-")[0]?.toLowerCase() ?? "";
+}
+
+/** Is a voice with this locale from `language`? */
+export function speaksNatively(locale: string, language: string): boolean {
+  const want = primaryOf(language);
+  const have = primaryOf(locale);
+  return have === want || (LOCALE_ALIASES[want] ?? []).includes(have);
+}
+
+/**
+ * The stock voice to read a block in `language` when `current` is not from
+ * that language: Speechify's staff pick for it, of the region the language
+ * names and the gender of `current` when it can be, the first pick before
+ * the second. Null when `current` already speaks it, when `current` is a
+ * clone (a clone is chosen to sound like itself, so it reads everything),
+ * or when the key has no voice from that language.
+ */
+export function nativeVoice(language: string, voices: readonly Voice[], current: Voice): Voice | null {
+  if (current.cloned || speaksNatively(current.locale, language)) return null;
+  const exact = language.includes("-") ? language.toLowerCase() : null;
+  const rank = (voice: Voice): number[] => [
+    voice.staffPick === null ? 1 : 0,
+    exact !== null && voice.locale.toLowerCase() !== exact ? 1 : 0,
+    current.gender !== "unspecified" && voice.gender !== current.gender ? 1 : 0,
+    voice.staffPick ?? 0,
+  ];
+  const candidates = voices.filter((voice) => !voice.cloned && speaksNatively(voice.locale, language));
+  candidates.sort((a, b) => {
+    const [ra, rb] = [rank(a), rank(b)];
+    for (let i = 0; i < ra.length; i++) {
+      if (ra[i] !== rb[i]) return (ra[i] ?? 0) - (rb[i] ?? 0);
+    }
+    return a.name.localeCompare(b.name);
+  });
+  return candidates[0] ?? null;
 }
 
 /** Featured first, then shared narrators, then workspace clones; A to Z within each. */

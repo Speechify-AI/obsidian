@@ -28,6 +28,8 @@ export interface Passage {
   text: string;
   /** `map[i]` is the note offset of `text[i]`. Same length as `text`. */
   map: number[];
+  /** The paragraph, heading, list item or table row it came from: its pieces share a number. */
+  block: number;
 }
 
 /**
@@ -43,7 +45,7 @@ export const PASSAGE_LIMIT = 200;
 
 export function toPassages(source: string, limit = PASSAGE_LIMIT): Passage[] {
   const skip = skipFlags(source);
-  const reader: Reader = { source, skip, limit, block: { text: "", map: [] }, out: [], inTable: false, inList: false };
+  const reader: Reader = { source, skip, limit, block: { text: "", map: [], block: 0 }, out: [], inTable: false, inList: false };
   let lineStart = 0;
   while (lineStart <= source.length) {
     const lineEnd = endOfLine(source, lineStart);
@@ -76,7 +78,7 @@ interface Reader {
 /** End the current block and cut it into passages. */
 function flush(reader: Reader): void {
   const whole = trimPassage(reader.block);
-  reader.block = { text: "", map: [] };
+  reader.block = { text: "", map: [], block: whole.block + 1 };
   for (const range of chunkRanges(whole.text, reader.limit)) {
     const piece = trimPassage(slicePassage(whole, range.start, range.end));
     if (piece.text !== "") reader.out.push(piece);
@@ -216,11 +218,12 @@ function emit(block: Passage, ch: string, sourceOffset: number): void {
   block.map.push(sourceOffset);
 }
 
-function slicePassage(passage: Passage, start: number, end: number): Passage {
-  return { text: passage.text.slice(start, end), map: passage.map.slice(start, end) };
+/** A slice keeps everything else the passage carries, such as a language assigned to it. */
+function slicePassage<P extends Passage>(passage: P, start: number, end: number): P {
+  return { ...passage, text: passage.text.slice(start, end), map: passage.map.slice(start, end) };
 }
 
-function trimPassage(passage: Passage): Passage {
+function trimPassage<P extends Passage>(passage: P): P {
   const start = passage.text.length - passage.text.trimStart().length;
   const end = passage.text.trimEnd().length;
   return start === 0 && end === passage.text.length ? passage : slicePassage(passage, start, Math.max(start, end));
@@ -465,8 +468,8 @@ export function passageIndexAt(passages: readonly Passage[], position: number): 
 }
 
 /** Only what lies inside the note range `[from, to)`: a selection. */
-export function clipPassages(passages: readonly Passage[], from: number, to: number): Passage[] {
-  const out: Passage[] = [];
+export function clipPassages<P extends Passage>(passages: readonly P[], from: number, to: number): P[] {
+  const out: P[] = [];
   for (const passage of passages) {
     const start = spokenOffsetAt(passage, from);
     const end = spokenOffsetAt(passage, to);
