@@ -246,9 +246,9 @@ Japanese, Hindi, English), with the simba-compare key and Dominic
   since the voice is from it. All 200, a mark per word to the end. The
   English passages came from the cache.
 
-Not heard: nobody listened to the French and German to judge the accent.
-The docs say a voice keeps the accent of its recording, so Dominic reads
-French as an American would.
+Heard on 2026-10-29 by Shaun, with native voices on: sounds good. With
+them off a voice keeps the accent of its recording, per the docs, so
+Dominic reads French as an American would; that has not been listened to.
 
 ## Verified on 2026-10-21: simba-3.5
 
@@ -302,9 +302,10 @@ not the voice's.
   written, and has never been run against a full cache.
 - Languages other than English in Obsidian, and right-to-left text. One
   Hindi line rendered with word marks on the API alone.
-- How a non-English block sounds with `language` against without: the
-  requests and marks are verified above, the audio has not been listened
-  to. `dev-vault/Language test.md` is the note for it.
+- How a non-English block sounds in the chosen voice with `language`,
+  the "Your voice, in that language" setting. The native-voice default
+  has been listened to; this one has not. `dev-vault/Language test.md` is
+  the note for it.
 
 ## Open
 
