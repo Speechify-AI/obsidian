@@ -4,6 +4,17 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
+Version 0.1.9, drafted 2026-10-30 and held until the device test:
+`isDesktopOnly` is `false`, so this release installs on phones and
+tablets. The bar fits a phone screen
+(the voice name is what gives way), rises above the on-screen keyboard
+with Obsidian's `--keyboard-height`, has finger-sized buttons under
+`.is-mobile`, and hover styles are behind `@media (hover: hover)`; on a
+touch screen every voice row shows its sample's play button. Checked in
+Obsidian's mobile emulation on 2026-10-30, below. **Not yet run on a
+device**: that is the gate before the draft release is published,
+checklist under Open.
+
 Version 0.1.8, released 2026-10-29: each block is sent with
 the language it is written in, found on the device by `src/language.ts`
 (script first, then weighted function words and marker letters), or set by
@@ -51,10 +62,48 @@ GitHub tag, which must equal the manifest version, no `v`, with `main.js`,
 | Model | `simba-3.5`, fixed in `src/main.ts`; 3.2 until 2026-10-21 |
 | Default voice | `harper_32`; other languages go to the catalogue's staff pick of the same gender |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
-| Platforms | Desktop only (`isDesktopOnly: true`) until mobile is tested |
+| Platforms | Desktop and, from the next release, mobile (`isDesktopOnly: false`); mobile checked in emulation only |
 | Author in the manifest | Speechify AI, `https://speechify.ai` with listing UTM tags |
 | Integration slug | `obsidian`, in `src/speechify.ts`, never changes |
 | Render cache | IndexedDB database `speechify-renders`, 400 MB cap |
+
+## Verified on 2026-10-30: the phone layout, in emulation
+
+In Obsidian 1.14.5 on macOS, in the throwaway instance with
+`app.emulateMobile(true)`, the window at 390×844, touch events on and
+`hover: none` emulated over the DevTools protocol, against the stub
+backend with a word every 500 ms. Emulation gives the mobile layout,
+classes and media features; it is not a phone's WebView, its audio
+policy or its lifecycle.
+
+- The body carried `is-mobile is-phone`, the navigation bar sat at the
+  bottom, 52 px tall. Playing `Listening test.md` from the header icon:
+  the bar was 328 px wide with "Dominic", centred, its bottom 22 px above
+  the navigation bar, buttons 40 px tall and the play button 44 px.
+- With the voice renamed "Alexandra Whitmore-Castellanos" the bar first
+  overflowed the window (427 px: `width: fit-content` never shrinks
+  nowrap text), so the bar has a `max-width` of the window minus the
+  insets. After it: 366 px wide, the name cut with an ellipsis, every
+  other button at its size.
+- `--keyboard-height: 300px` set on the body moved the bar up by 300 px.
+  Obsidian sets that variable while the soft keyboard is up and puts its
+  editor toolbar at the keyboard's top, so the bar should sit above the
+  toolbar; the real keyboard was not seen.
+- A touch tap on the play button paused, a second tap played. No hover
+  style stuck to it.
+- The voice picker, with a made-up catalogue of six voices: full width
+  under the header, rows 56 px tall. Under `hover: none` every row with
+  a sample showed its play button in place of the initial, the row
+  without one its initial. A tap on an avatar played the sample and left
+  the picker open; a tap on a row's text chose it, closed the picker and
+  renamed the bar.
+- Reading view: playing from the top painted the sentence and word
+  through the CSS highlights; a tap on a word in the second paragraph
+  moved the playhead to its sentence and playback went on.
+- Back on desktop, the play button's icon is white at rest and under the
+  pointer, where the hover blue shows. The first cut of the hover media
+  query had dropped the icon's colour from the hover rule and left it in
+  the theme's text colour under the pointer; Shaun saw it in his vault.
 
 ## Verified on 2026-10-01
 
@@ -293,7 +342,7 @@ not the voice's.
 
 ## Not verified
 
-- Mobile, at all.
+- Mobile on a device. Only the emulated layout above.
 - Popout windows. The bar is added to the main window's body. Reading view
   highlights use the popout's own registry, untried.
 - Reading view against the live API, and in a community theme.
@@ -322,8 +371,35 @@ not the voice's.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
-- Mobile: test on a phone, then set `isDesktopOnly` back to `false`. No
-  code needs desktop.
+- Mobile: run the build on a phone before the release that carries
+  `isDesktopOnly: false`. Copy `main.js`, `manifest.json` and `styles.css`
+  into a vault the phone syncs, or install BRAT and point it at the repo.
+  What to check, roughly in the order it can fail:
+  - The plugin enables and the settings tab opens. The API key secret
+    can be chosen there (SecretStorage on mobile), and the key check
+    reports the voice count. `window.isSecureContext` must be true, or
+    `crypto.subtle` is missing and every render fails as "Could not
+    reach Speechify".
+  - Press the header icon: first audio arrives and plays without a
+    second tap. If the first play is refused, the bar shows paused and a
+    tap on play must start it; after that, passages should follow
+    without taps, since the one audio element has been unlocked.
+  - Passage boundaries: playback continues into the next passage, on
+    both iOS and Android.
+  - Speed changes apply, and the speed menu opens as a bottom sheet.
+  - The bar clears the navigation bar; with the keyboard up it sits
+    above the editor toolbar. On a tablet there is no navigation bar, so
+    the bar floats a little high.
+  - The voice picker: a tap on an avatar plays the sample and does not
+    choose; a tap on the row chooses. Scrolling the list does not choose.
+  - Reading view highlights (iOS 17.2 and Android Chrome 105 or later
+    have the CSS Custom Highlight API; older WebViews just show nothing)
+    and tap to listen in both views.
+  - Lock the screen and switch apps while playing: what happens to the
+    current passage and whether the next one starts. The README says
+    neither carries on; correct it if a platform does better.
+  - The iOS mute switch: whether playback is silenced by it.
+  - A render cached on the phone replays with no request.
 - Readback and Soundbites share the code point bug: neither converts mark
   offsets, so an emoji shifts their highlights too.
 
@@ -372,3 +448,13 @@ that cost time the first time:
 - Node 22 and later has `WebSocket` built in, so a CDP driver is one short
   `.mjs` file: fetch `/json`, open the page's `webSocketDebuggerUrl`, send
   `{id, method, params}`.
+- The phone layout: `app.emulateMobile(true)` reloads the window with
+  `is-mobile` set, and `is-phone` once the window is under 600 px in
+  either direction. Resize it from inside with
+  `electron.remote.getCurrentWindow().setContentSize(390, 844)`; the
+  `Browser` domain is not on a page target. `Emulation.setEmulatedMedia`
+  with `hover: none` and `pointer: coarse`, `Emulation.setTouchEmulationEnabled`
+  and `Input.dispatchTouchEvent` give touch and no hover. Every
+  `Emulation.*` override lasts only as long as the CDP session that set
+  it, so a scenario has to run whole over one WebSocket.
+  `app.emulateMobile(false)` to leave.

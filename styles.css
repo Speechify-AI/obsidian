@@ -44,12 +44,20 @@ body {
   background-color: var(--speechify-word);
 }
 
-/* The player bar: a pill over the bottom of the window. */
+/*
+ * The player bar: a pill over the bottom of the window. It is as wide as
+ * its buttons and centred between the side insets; on a phone the insets
+ * are what it can have, and the voice name is the one thing that gives.
+ */
 .speechify-bar {
   position: fixed;
-  left: 50%;
+  left: var(--size-4-3);
+  right: var(--size-4-3);
   bottom: calc(var(--size-4-12) + var(--safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  width: fit-content;
+  /* fit-content alone never shrinks nowrap text; this cap is what makes the voice name give. */
+  max-width: calc(100% - 2 * var(--size-4-3));
+  margin: 0 auto;
   z-index: var(--layer-popover);
   display: flex;
   align-items: center;
@@ -61,12 +69,14 @@ body {
   box-shadow: var(--shadow-s);
 }
 
+/* Above the navigation bar, and above the keyboard and its toolbar while one is up. */
 .is-mobile .speechify-bar {
-  bottom: calc(var(--size-4-18) + var(--safe-area-inset-bottom, 0px));
+  bottom: calc(var(--size-4-18) + var(--safe-area-inset-bottom, 0px) + var(--keyboard-height, 0px));
 }
 
 .speechify-bar .speechify-bar-button {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: center;
   height: var(--size-4-8);
@@ -83,9 +93,24 @@ body {
   cursor: var(--cursor);
 }
 
-.speechify-bar .speechify-bar-button:hover {
-  background-color: var(--background-modifier-hover);
-  color: var(--text-normal);
+/* Finger-sized on a touch screen. */
+.is-mobile .speechify-bar .speechify-bar-button {
+  height: var(--touch-size-s, 40px);
+  min-width: var(--touch-size-s, 40px);
+}
+
+/* Hover only where there is a pointer to hover with; on a touch screen a tap would leave it stuck. */
+@media (hover: hover) {
+  .speechify-bar .speechify-bar-button:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  /* After the rule above, which would otherwise darken the icon on the blue. */
+  .speechify-bar .speechify-bar-toggle:hover {
+    background-color: var(--speechify-blue-hover);
+    color: #fff;
+  }
 }
 
 .speechify-bar .speechify-bar-button:disabled {
@@ -94,6 +119,8 @@ body {
 }
 
 .speechify-bar .speechify-bar-voice {
+  flex: 0 1 auto;
+  min-width: 3em;
   max-width: 12em;
   padding: 0 var(--size-4-3);
   overflow: hidden;
@@ -108,16 +135,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.speechify-bar .speechify-bar-toggle,
-.speechify-bar .speechify-bar-toggle:hover {
+.speechify-bar .speechify-bar-toggle {
   width: var(--size-4-9);
   height: var(--size-4-9);
   background-color: var(--speechify-blue);
   color: #fff;
 }
 
-.speechify-bar .speechify-bar-toggle:hover {
-  background-color: var(--speechify-blue-hover);
+.is-mobile .speechify-bar .speechify-bar-toggle {
+  width: var(--touch-size-m, 44px);
+  height: var(--touch-size-m, 44px);
 }
 
 /* Waiting for audio: a white arc turning on a faint track. */
@@ -233,21 +260,44 @@ body {
 }
 
 .speechify-voice.is-selected .speechify-voice-sample .speechify-voice-initial,
-.speechify-voice:hover .speechify-voice-sample .speechify-voice-initial,
 .speechify-voice .speechify-voice-sample.is-playing .speechify-voice-initial {
   display: none;
 }
 
 .speechify-voice.is-selected .speechify-voice-sample .speechify-voice-play,
-.speechify-voice:hover .speechify-voice-sample .speechify-voice-play,
 .speechify-voice .speechify-voice-sample.is-playing .speechify-voice-play {
   display: flex;
 }
 
-.speechify-voice .speechify-voice-sample:hover,
 .speechify-voice .speechify-voice-sample.is-playing {
   background-color: var(--speechify-blue);
   color: #fff;
+}
+
+@media (hover: hover) {
+  .speechify-voice:hover .speechify-voice-sample .speechify-voice-initial {
+    display: none;
+  }
+
+  .speechify-voice:hover .speechify-voice-sample .speechify-voice-play {
+    display: flex;
+  }
+
+  .speechify-voice .speechify-voice-sample:hover {
+    background-color: var(--speechify-blue);
+    color: #fff;
+  }
+}
+
+/* On a touch screen no row is ever under a pointer, so every sample shows its play button. */
+@media (hover: none) {
+  .speechify-voice .speechify-voice-sample .speechify-voice-initial {
+    display: none;
+  }
+
+  .speechify-voice .speechify-voice-sample .speechify-voice-play {
+    display: flex;
+  }
 }
 
 .speechify-voice .speechify-voice-play .svg-icon {

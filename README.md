@@ -13,7 +13,8 @@ with the text.
 In Obsidian, open Settings, Community plugins, Browse, search for
 **Speechify** and install it, or open
 <https://community.obsidian.md/plugins/speechify>. Then turn it on under
-Settings, Community plugins. It needs Obsidian 1.11.4 or later.
+Settings, Community plugins. It needs Obsidian 1.11.4 or later, on desktop
+or mobile.
 
 To run a build of your own instead, copy three files into your vault:
 
@@ -101,8 +102,12 @@ Malay from Indonesian. A `lang` property settles those.
 - The first audio arrives about one to three seconds after you press play.
   After that the plugin renders ahead of the playhead and playback is
   continuous.
-- Desktop only for now. Nothing in the plugin needs desktop, but it has not
-  been tested on a phone or tablet, so it does not install there yet.
+- On a phone or tablet, playback runs while Obsidian is open in front of
+  you with the screen on. The phone does not keep the next passage coming
+  from the lock screen or from another app, and a passage the system
+  pauses stays paused until you press play. The ribbon is behind the
+  sidebar menu there, so the header icon or a command on your toolbar is
+  the way to start.
 
 ## Network use and cost
 
