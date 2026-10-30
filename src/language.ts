@@ -165,23 +165,33 @@ const SIBLINGS = [["da", "no"]];
 
 /**
  * Score every language a marker belongs to, 1/n per occurrence, and take
- * the leader if it leads clearly: at least two points, a point ahead, and a
- * fifth more than the runner-up.
+ * the leader if it leads clearly: at least two points, two markers that are
+ * not the same one twice, a point ahead, and a fifth more than the runner-up.
+ *
+ * Two of one marker is not evidence. "J&J" in an English line is two bare
+ * `j`s, the elided French `j'`, and used to carry the line, the heading over
+ * it and every undecided block after it into French (measured 2026-10-30).
  */
 function scored(text: string, markers: Markers): string | null {
   const index = markerIndex(markers);
   const score = new Map<string, number>();
-  const add = (languages: readonly string[] | undefined): void => {
+  const distinct = new Map<string, Set<string>>();
+  const add = (languages: readonly string[] | undefined, marker: string): void => {
     if (!languages) return;
-    for (const language of languages) score.set(language, (score.get(language) ?? 0) + 1 / languages.length);
+    for (const language of languages) {
+      score.set(language, (score.get(language) ?? 0) + 1 / languages.length);
+      const seen = distinct.get(language) ?? new Set<string>();
+      seen.add(marker);
+      distinct.set(language, seen);
+    }
   };
   const lower = text.normalize("NFC").toLowerCase();
-  for (const word of lower.match(/[\p{L}\p{M}]+/gu) ?? []) add(index.words.get(word));
-  for (const ch of lower) add(index.letters.get(ch));
+  for (const word of lower.match(/[\p{L}\p{M}]+/gu) ?? []) add(index.words.get(word), word);
+  for (const ch of lower) add(index.letters.get(ch), ch);
 
   const ranked = [...score.entries()].sort((a, b) => b[1] - a[1]);
   const [first, second, third] = ranked;
-  if (!first || first[1] < 2) return null;
+  if (!first || first[1] < 2 || (distinct.get(first[0])?.size ?? 0) < 2) return null;
   const siblings = second !== undefined && SIBLINGS.some((pair) => pair.includes(first[0]) && pair.includes(second[0]));
   const runnerUp = (siblings ? third : second)?.[1] ?? 0;
   return first[1] - runnerUp >= 1 && first[1] >= 1.2 * runnerUp ? first[0] : null;

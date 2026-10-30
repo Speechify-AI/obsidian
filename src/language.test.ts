@@ -66,6 +66,15 @@ describe("detectLanguage", () => {
     expect(detectLanguage("")).toBeNull();
   });
 
+  it("takes two of one marker for no evidence at all", () => {
+    // "J&J" is two bare j's, the elided French j'. On 2026-10-30 that carried
+    // a whole English list, and the heading over it, into French.
+    expect(detectLanguage("J&J")).toBeNull();
+    expect(detectLanguage("Cadre: voice receptionist POC (J&J Insurance evaluation)")).toBeNull();
+    expect(detectLanguage("J. R. R. Tolkien wrote it")).toBeNull();
+    expect(detectLanguage("S&P 500 closed higher")).toBeNull();
+  });
+
   it("goes by the script that most of the text is in", () => {
     expect(detectLanguage("The word for cat in Japanese is 猫, and it is read as the English around it.")).toBe("en");
     expect(detectLanguage("漢字だけでなく、かなも使う。")).toBe("ja");
@@ -119,6 +128,20 @@ describe("withLanguages", () => {
     expect(withLanguages(toPassages(source), source, true).map((p) => p.language)).toEqual(["ms", "en"]);
     const brazil = `---\nlang: pt-BR\n---\n${SAMPLES.pt}`;
     expect(withLanguages(toPassages(brazil), brazil, true).map((p) => p.language)).toEqual(["pt-BR"]);
+  });
+
+  it("keeps an English list English when one line carries a pair of initials", () => {
+    const source = [
+      "## Customers",
+      "",
+      "- AssemblyAI: accent stability demo",
+      "- Cadre: voice receptionist POC (J&J Insurance evaluation)",
+      "- Noa: article-to-MP3 API demo",
+      "",
+      `${SAMPLES.en}`,
+    ].join("\n");
+    const spoken = withLanguages(toPassages(source), source, true);
+    expect(spoken.map((p) => p.language)).toEqual(spoken.map(() => "en"));
   });
 
   it("keeps its answer when a selection is clipped out", () => {
