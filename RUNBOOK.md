@@ -4,6 +4,16 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
+Version 0.1.10, released 2026-10-30: a passage on iOS starts on its own,
+and a pair of initials no longer sends an English note to a French
+voice. 0.1.9 installed on phones and played, but every passage after the
+first needed a press of play; six diagnostic builds on Shaun's iPhone
+found three causes stacked on each other, recorded below. Separately,
+`J&J` in an English list was read as two French `j'`s and took the list,
+its heading and the rest of the note into French, on desktop as much as
+on the phone; the detector now wants two markers that are not the same
+one twice. Unit tests: 161 passing.
+
 Version 0.1.9, released 2026-10-30: `isDesktopOnly` is `false`, so the
 plugin installs on phones and tablets. Shaun ran the build on his phone
 the same day and it played; the device, OS and Obsidian version were not
@@ -66,6 +76,46 @@ GitHub tag, which must equal the manifest version, no `v`, with `main.js`,
 | Author in the manifest | Speechify AI, `https://speechify.ai` with listing UTM tags |
 | Integration slug | `obsidian`, in `src/speechify.ts`, never changes |
 | Render cache | IndexedDB database `speechify-renders`, 400 MB cap |
+
+## Verified on 2026-10-30: a passage starts on its own, on iOS
+
+On Shaun's iPhone, iOS 18.7, Obsidian from the App Store, against the
+live API. 0.1.9 played the first passage and then stopped at every
+boundary: the bar showed Play and a press carried on with the same
+clip. Six builds, `0.1.9-diag.1` to `.7`, were installed through BRAT
+off a `diag/mobile-playback` branch, each one reporting every play,
+pause, ended and restart as a notice. Three causes, each hidden by the
+one before it:
+
+- **iOS pauses the passage after a boundary**, with `play()` resolved
+  and nothing asked of it, and again each time it is played through.
+  One passage was paused 172 ms, 818 ms and 1462 ms after its boundary,
+  another 249 ms and 913 ms. The player took the first for the person's
+  and showed Play. The first passage of a listen was never hit.
+- **`load` handing the element a new source fires a pause of its own**,
+  at readyState 0 with no duration, from the media load algorithm.
+  Playing through that one called `play()` on a loading element.
+- **A `play()` issued straight after the source is assigned is
+  rejected**, `AbortError: The operation was aborted`, at readyState 0.
+  This is what the second build mistook for iOS and the third for its
+  own restart; it is neither.
+
+What shipped: play waits for `loadeddata` (five second cap), `resume()`
+does not call `play()` while one is pending, a pause at readyState 0 is
+ignored, and in the iOS app a pause nobody asked for within six seconds
+of a boundary is played through 80 ms later, eight times a passage at
+most. The 80 ms is flat on purpose: most of these pauses come while the
+clip still reads 0.00 s, where the wait only lengthens a gap that is
+silent anyway, but one came at 0.82 s with the sentence in the air,
+where a wait is a hole in the middle of a word. An early build used
+backoff to 2500 ms, which would have stretched exactly that case; Shaun
+asked whether it would sound stop-start, which is what caught it.
+
+Heard on 2026-10-30 by Shaun, on the phone: "much improved".
+
+Not checked: Android, the lock screen, another app in front, the iOS
+mute switch, a tablet, and how the joins sound against a slow network
+where a passage is not yet rendered when the one before it ends.
 
 ## Verified on 2026-10-30: the phone layout, in emulation
 
@@ -342,11 +392,11 @@ not the voice's.
 
 ## Not verified
 
-- Mobile, item by item. One phone played a note on 2026-10-30; what the
-  lock screen, another app in front, the iOS mute switch, the soft
-  keyboard and a tablet do was not recorded separately, and no Android
-  device is known to have run it. The checklist under Open is the one to
-  walk on the next device.
+- Mobile, item by item. An iPhone on iOS 18.7 played notes through on
+  2026-10-30, across passage boundaries, in both views; what the lock
+  screen, another app in front, the iOS mute switch, the soft keyboard
+  and a tablet do was not recorded, and no Android device is known to
+  have run it. The checklist under Open is the one to walk next.
 - Popout windows. The bar is added to the main window's body. Reading view
   highlights use the popout's own registry, untried.
 - Reading view against the live API, and in a community theme.
@@ -387,8 +437,9 @@ not the voice's.
     second tap. If the first play is refused, the bar shows paused and a
     tap on play must start it; after that, passages should follow
     without taps, since the one audio element has been unlocked.
-  - Passage boundaries: playback continues into the next passage, on
-    both iOS and Android.
+  - Passage boundaries: playback continues into the next passage. Held
+    on iOS 18.7 from 0.1.10; Android is untried, and if it stops there
+    too, `isIos` in `src/main.ts` is where the restart is gated.
   - Speed changes apply, and the speed menu opens as a bottom sheet.
   - The bar clears the navigation bar; with the keyboard up it sits
     above the editor toolbar. On a tablet there is no navigation bar, so
@@ -448,6 +499,15 @@ that cost time the first time:
   `button: "left"`, `clickCount: 1`) at the coordinates `coordsAtPos` or a
   text node's `Range.getBoundingClientRect()` gives. A `click()` on an
   element has no coordinates and finds no position.
+- A build for a phone goes out as a pre-release on a `diag/` branch, and
+  BRAT installs it by frozen version tag (`Speechify-AI/obsidian`,
+  `0.1.9-diag.3`). A pre-release is not what the community directory
+  serves, so the directory keeps showing the real latest; `gh api
+  repos/Speechify-AI/obsidian/releases/latest` says which that is. Delete
+  each one with `gh release delete <tag> --cleanup-tag` when it is spent.
+  To see what the plugin does on the phone, have it report through
+  `new Notice(message, 20000)` and read the notices off a screenshot;
+  there is no console to attach to.
 - Node 22 and later has `WebSocket` built in, so a CDP driver is one short
   `.mjs` file: fetch `/json`, open the page's `webSocketDebuggerUrl`, send
   `{id, method, params}`.
