@@ -12,6 +12,7 @@ import {
   MarkdownView,
   Menu,
   Notice,
+  Platform,
   Plugin,
   requestUrl,
 } from "obsidian";
@@ -93,6 +94,7 @@ export default class SpeechifyPlugin extends Plugin implements SettingsHost {
       follow: () => this.settings.follow,
       detectLanguage: () => this.settings.otherLanguages !== "off",
       voiceLocale: () => this.settings.voiceLocale,
+      isIos: Platform.isIosApp,
       voiceFor: (language) => this.voiceFor(language),
       onState: (state) => {
         this.state = state;

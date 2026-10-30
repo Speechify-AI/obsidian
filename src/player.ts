@@ -59,6 +59,8 @@ export interface PlayerHost {
   detectLanguage(): boolean;
   /** The chosen voice's locale, "en-US"; a passage in that language is sent without one. */
   voiceLocale(): string;
+  /** In the iOS app, where a passage boundary brings a pause nobody asked for; see RESTART_DELAYS_MS. */
+  isIos: boolean;
   /** A voice from `language` to read a block in it with, or null to keep the chosen voice. */
   voiceFor(language: string): Promise<{ id: string; locale: string } | null>;
   onState(state: PlayerState): void;
@@ -101,6 +103,33 @@ export interface Player {
 const LOOK_AHEAD = 2;
 /** A cached passage loads in a few milliseconds; only a real wait shows as loading. */
 const LOADING_AFTER_MS = 150;
+/**
+ * iOS pauses the passage after a passage boundary, with play() resolved and
+ * nothing asked of it, and does it again each time it is played through: one
+ * passage was paused 172 ms, 818 ms and 1462 ms after the boundary
+ * (Obsidian from the App Store, iOS 18.7, 2026-10-30; the runbook has the
+ * notices). The first passage of a listen is never hit.
+ *
+ * Each such pause is played through after this long. The wait is short and
+ * does not grow: most of these pauses come while the clip still stands at
+ * 0.00 s, where the wait only lengthens the gap between passages, but one
+ * came at 0.82 s with the sentence already in the air, and there the wait is
+ * a hole in the middle of a word. Backoff would make exactly that case
+ * worse, and buys nothing: the spacing between iOS's pauses is its own.
+ */
+const RESTART_DELAY_MS = 80;
+/** Restarts a passage may spend. Eight at 80 ms is under a second of waiting across a passage. */
+const RESTART_BUDGET = 8;
+/** `HTMLMediaElement.HAVE_CURRENT_DATA`: there is a frame to start on. */
+const HAVE_CURRENT_DATA = 2;
+/**
+ * Long enough that a blob already in memory has always loaded. Past it the
+ * element is played anyway, so a source that never reports data still gets
+ * its chance rather than leaving the passage silent.
+ */
+const READY_TIMEOUT_MS = 5000;
+/** How long after a boundary a pause nobody asked for is taken for iOS's rather than the person's. */
+const RESTART_WINDOW_MS = 6000;
 /** A time to land at in a passage, from its start or before its end. */
 type At = { ms: number } | { beforeEndMs: number };
 
@@ -135,6 +164,12 @@ export function createPlayer(host: PlayerHost): Player {
   /** Set when we pause or play the element ourselves, so its event is not taken for a media key. */
   let ownPause = false;
   let ownPlay = false;
+  /** When the passage before the loaded one ended, while the loaded one was started by that and nothing since. */
+  let boundaryAt: number | null = null;
+  /** Restarts spent on the loaded passage after pauses nobody asked for. */
+  let restarts = 0;
+  /** A play() is waiting to settle; a second one would abort it. */
+  let playPending = false;
 
   const pauseAudio = (): void => {
     if (audio.paused) return;
@@ -190,6 +225,8 @@ export function createPlayer(host: PlayerHost): Player {
     s.index = index;
     s.current = null;
     s.painted = { word: -1, sentence: -1 };
+    restarts = 0;
+    boundaryAt = null;
     pauseAudio();
     // The whole passage is marked while its audio is on the way.
     paint(s, { sentence: sourceRange(passage, 0, passage.text.length), word: null }, true);
@@ -221,16 +258,46 @@ export function createPlayer(host: PlayerHost): Player {
     await resume();
   }
 
+  /**
+   * The element holds data to start on. Assigning a source starts a load that
+   * runs on its own, and WebKit rejects a play() caught up in it: on iOS 18.7
+   * the passage after a boundary was asked to play at readyState 0 and came
+   * back AbortError, leaving the passage silent until the person pressed play.
+   */
+  function whenReady(): Promise<void> {
+    if (audio.readyState >= HAVE_CURRENT_DATA) return Promise.resolve();
+    return new Promise((resolve) => {
+      let timer = 0;
+      const done = (): void => {
+        audio.removeEventListener("loadeddata", done);
+        audio.removeEventListener("error", done);
+        window.clearTimeout(timer);
+        resolve();
+      };
+      timer = window.setTimeout(done, READY_TIMEOUT_MS);
+      audio.addEventListener("loadeddata", done);
+      audio.addEventListener("error", done);
+    });
+  }
+
   async function resume(): Promise<void> {
+    // A second play() while one is pending aborts the first; the pending one
+    // starts this passage, so there is nothing to do here.
+    if (playPending) return;
     const mine = turn;
-    ownPlay = audio.paused;
+    playPending = true;
     try {
+      await whenReady();
+      if (mine !== turn) return;
+      ownPlay = audio.paused;
       await audio.play();
     } catch {
       ownPlay = false;
       // Refused (mobile wants a tap first) or cut short by a newer load.
       if (mine === turn) setStatus("paused");
       return;
+    } finally {
+      playPending = false;
     }
     if (mine !== turn) return;
     setStatus("playing");
@@ -325,11 +392,36 @@ export function createPlayer(host: PlayerHost): Player {
     void playAt(index, lastOffset(s.passages[index]), time);
   }
 
-  audio.addEventListener("ended", () => move(1));
+  audio.addEventListener("ended", () => {
+    // playAt clears boundaryAt on its way in, so a passage the person starts carries none.
+    move(1);
+    boundaryAt = performance.now();
+  });
   // Paused or resumed from outside: a media key, the OS, a headset button.
   audio.addEventListener("pause", () => {
-    if (ownPause) ownPause = false;
-    else if (status === "playing" && !audio.ended) setStatus("paused");
+    if (ownPause) {
+      ownPause = false;
+      return;
+    }
+    if (status !== "playing" || audio.ended) return;
+    // Nothing is loaded: this is the pause the media load algorithm fires when
+    // `load` hands the element a new source, our own doing, not a pause of
+    // playback. The play already under way starts the passage once data
+    // arrives; playing through here would call play on a loading element and
+    // abort that one (AbortError, measured on iOS 18.7).
+    if (audio.readyState === 0) return;
+    // Soon after a boundary on iOS, the pause is iOS's (see RESTART_DELAY_MS)
+    // and is played through. Anywhere else it is the person's and holds.
+    const afterBoundary = boundaryAt !== null && performance.now() - boundaryAt < RESTART_WINDOW_MS;
+    if (host.isIos && afterBoundary && restarts < RESTART_BUDGET) {
+      restarts++;
+      const mine = turn;
+      window.setTimeout(() => {
+        if (mine === turn && status === "playing" && audio.paused && !audio.ended) void resume();
+      }, RESTART_DELAY_MS);
+      return;
+    }
+    setStatus("paused");
   });
   audio.addEventListener("play", () => {
     if (ownPlay) ownPlay = false;
