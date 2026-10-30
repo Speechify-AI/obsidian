@@ -4,16 +4,16 @@ Live state and what has been verified. Conventions live in `CLAUDE.md`.
 
 ## State
 
-Version 0.1.9, drafted 2026-10-30 and held until the device test:
-`isDesktopOnly` is `false`, so this release installs on phones and
-tablets. The bar fits a phone screen
+Version 0.1.9, released 2026-10-30: `isDesktopOnly` is `false`, so the
+plugin installs on phones and tablets. Shaun ran the build on his phone
+the same day and it played; the device, OS and Obsidian version were not
+written down, nor which items of the checklist below were walked one by
+one. The bar fits a phone screen
 (the voice name is what gives way), rises above the on-screen keyboard
 with Obsidian's `--keyboard-height`, has finger-sized buttons under
 `.is-mobile`, and hover styles are behind `@media (hover: hover)`; on a
 touch screen every voice row shows its sample's play button. Checked in
-Obsidian's mobile emulation on 2026-10-30, below. **Not yet run on a
-device**: that is the gate before the draft release is published,
-checklist under Open.
+Obsidian's mobile emulation on 2026-10-30, below.
 
 Version 0.1.8, released 2026-10-29: each block is sent with
 the language it is written in, found on the device by `src/language.ts`
@@ -62,7 +62,7 @@ GitHub tag, which must equal the manifest version, no `v`, with `main.js`,
 | Model | `simba-3.5`, fixed in `src/main.ts`; 3.2 until 2026-10-21 |
 | Default voice | `harper_32`; other languages go to the catalogue's staff pick of the same gender |
 | Minimum Obsidian | 1.11.4, for SecretStorage |
-| Platforms | Desktop and, from the next release, mobile (`isDesktopOnly: false`); mobile checked in emulation only |
+| Platforms | Desktop and mobile (`isDesktopOnly: false` since 0.1.9) |
 | Author in the manifest | Speechify AI, `https://speechify.ai` with listing UTM tags |
 | Integration slug | `obsidian`, in `src/speechify.ts`, never changes |
 | Render cache | IndexedDB database `speechify-renders`, 400 MB cap |
@@ -342,7 +342,11 @@ not the voice's.
 
 ## Not verified
 
-- Mobile on a device. Only the emulated layout above.
+- Mobile, item by item. One phone played a note on 2026-10-30; what the
+  lock screen, another app in front, the iOS mute switch, the soft
+  keyboard and a tablet do was not recorded separately, and no Android
+  device is known to have run it. The checklist under Open is the one to
+  walk on the next device.
 - Popout windows. The bar is added to the main window's body. Reading view
   highlights use the popout's own registry, untried.
 - Reading view against the live API, and in a community theme.
@@ -371,10 +375,9 @@ not the voice's.
 - Time to first audio is one to three seconds. The streaming endpoint with
   timestamps would cut it, and needs a streaming HTTP path that
   `requestUrl` does not offer.
-- Mobile: run the build on a phone before the release that carries
-  `isDesktopOnly: false`. Copy `main.js`, `manifest.json` and `styles.css`
-  into a vault the phone syncs, or install BRAT and point it at the repo.
-  What to check, roughly in the order it can fail:
+- Mobile, on the next device: copy `main.js`, `manifest.json` and
+  `styles.css` into a vault the phone syncs, or install BRAT and point it
+  at the repo. What to check, roughly in the order it can fail:
   - The plugin enables and the settings tab opens. The API key secret
     can be chosen there (SecretStorage on mobile), and the key check
     reports the voice count. `window.isSecureContext` must be true, or
