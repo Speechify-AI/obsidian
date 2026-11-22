@@ -454,8 +454,10 @@ not the voice's.
     neither carries on; correct it if a platform does better.
   - The iOS mute switch: whether playback is silenced by it.
   - A render cached on the phone replays with no request.
-- Readback and Soundbites share the code point bug: neither converts mark
-  offsets, so an emoji shifts their highlights too.
+- Soundbites has the code point bug: it does not convert mark offsets, so
+  an emoji shifts its highlights. Readback had it too and converts since
+  0.10.3 (2026-11-22), with `toCodeUnits` copied from here; its probe there
+  found SSML input counts code points as well.
 
 ## Testing in a throwaway Obsidian
 
